@@ -163,10 +163,10 @@
     }
     this.pop.forEach(function (p) { text(c, this.W_.bloom, ox + (p.x + 0.5) * s, oy + (p.y + 0.5) * s - (1.4 - p.t) * s, s * (0.7 + (1.4 - p.t) * 0.6)); }, this);
     drawDie(c, ox + this.col * s, oy - s * 1.15, s, this.cur, { stroke: '#fff' });
-    text(c, 'NEXT', ox + s * 0.1, oy - s * 1.3, s * 0.28, '#cde', 'left');
-    drawDie(c, ox + s * 0.1, oy - s * 1.1, s * 0.6, this.next);
-    text(c, this.W_.bloom + ' ' + this.flowers, ox + COLS * s - 4, oy - s * 1.3, s * 0.4, '#ffd43b', 'right');
-    text(c, '1→2→3→4→5→' + this.W_.bloom, ox + s * 2.3, oy - s * 1.3, Math.min(s * 0.26, 14), '#cde', 'center', '700');
+    text(c, 'NEXT', ox + s * 0.1, oy - s * 1.38, s * 0.26, '#cde', 'left');
+    drawDie(c, ox + s * 0.1 + s * 0.8, oy - s * 1.6, s * 0.46, this.next);          // sits on the top row, clear of the die you hold
+    text(c, '1→2→3→4→5→' + this.W_.bloom, ox + s * 2.55, oy - s * 1.38, Math.min(s * 0.26, 14), '#cde', 'center', '700');
+    text(c, this.W_.bloom + ' ' + this.flowers, ox + COLS * s - 4, oy - s * 1.38, s * 0.4, '#ffd43b', 'right');
   };
   Garden.prototype.colAt = function (x) { return clamp(Math.floor((x - this.ox) / this.cell), 0, COLS - 1); };
   Garden.prototype.pd = function (x) { this.col = this.colAt(x); this.down = true; };
