@@ -163,6 +163,34 @@ body.t-forest{--bg:#0f2417;--card:#183a26;--card2:#255238}
 }
 @media (max-width:520px){.hdr{flex-wrap:wrap}.hdr h2{flex:1}.hdr .tabs{order:5;flex-basis:100%;max-width:none}}
 
+/* urgency: calm -> orange (under 25%) -> red (last 10 s). Colour is paired with an icon change and a pulse. */
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:10px;opacity:0}
+#play[data-urg="1"] .tbar i{background:#ff922b}
+#play[data-urg="2"] .tbar i{background:#ff4d4d}
+#play[data-urg="2"] #hudLeft{color:#ff6b6b}
+#play[data-urg="1"] #stage::after{box-shadow:inset 0 0 0 3px rgba(255,146,43,.55);opacity:1}
+#play[data-urg="2"] #stage::after{box-shadow:inset 0 0 0 4px rgba(255,77,77,.8);animation:urgp 1s ease-in-out infinite}
+@keyframes urgp{50%{opacity:.25}}
+
+/* album: missing stickers are grey silhouettes with a ?, new ones carry a gold dot */
+.stk{position:relative;border:2px solid var(--card2)}
+.stk.no{opacity:1;filter:none}.stk.no span{filter:brightness(0);opacity:.22}
+.stk u{position:absolute;text-decoration:none;font-size:16px;font-weight:900;color:var(--muted);z-index:1}
+.stk .nw{position:absolute;top:3px;right:3px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)}
+.dock button.dot{position:relative}.dock button.dot::after{content:"";position:absolute;top:4px;right:6px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)}
+.skin button.poor{background:var(--card2);color:var(--bad)}
+
+.em.shake{display:inline-block;animation:shk .45s ease-in-out infinite}
+@keyframes shk{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+
+/* squish and bounce: buttons dip on press and spring back; the score bumps when it grows */
+button{transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s}
+button:active{transform:scale(.95) translateY(2px)}
+#hudScore{display:inline-block}
+#hudScore.bump{animation:bump .16s ease-out}
+@keyframes bump{50%{transform:scale(1.18)}}
+.gcard,.lv{transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s}
+
 </style>
 </head>
 <body>
@@ -257,7 +285,7 @@ var Prog = (function () {
   }
 
   function newSave() {
-    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0,
+    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0, seenStk: 0,
       skin: 0, skins: [0], gift: { last: '', streak: 0 }, sound: true, flowers: 0, plays: 0, seen: {} };
   }
   function rankOf(xp) {
@@ -728,6 +756,9 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       var f = clr[r * 10 + cc], blink = f && Math.floor(this.env.t * 20) % 2;
       drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc], { alpha: f ? (blink ? 0.4 : 1) : 1, scale: f ? 1.1 : 1, stroke: f ? '#fff' : null });
     }
+    var dl = oy + (ROWS - 8) * s;    // danger line: the stack is one piece away from trouble (3 rows from the top)
+    c.save(); c.setLineDash([6, 6]); c.strokeStyle = this.hot ? 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')' : 'rgba(255,255,255,0.14)'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
     var cur = this.cur;
     if (cur && this.state === 'fall') {
       var gy = this.land(cur.cells, cur.x);
@@ -938,6 +969,14 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       rr(c, ox + cc * s + 2, oy + r * s + 2, s - 4, s - 4, s * 0.15); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill();
       if (this.g[r][cc]) drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc]);
     }
+    // rows and columns that are one die from full glow softly
+    var gl, gr, gc, rowN, colN;
+    for (gl = 0; gl < N; gl++) {
+      rowN = 0; colN = 0;
+      for (gr = 0; gr < N; gr++) { if (this.g[gl][gr]) rowN++; if (this.g[gr][gl]) colN++; }
+      if (rowN === N - 1) { rr(c, ox, oy + gl * s, N * s, s, s * 0.2); c.fillStyle = 'rgba(255,212,59,0.13)'; c.fill(); }
+      if (colN === N - 1) { rr(c, ox + gl * s, oy, s, N * s, s * 0.2); c.fillStyle = 'rgba(255,212,59,0.13)'; c.fill(); }
+    }
     var d = this.drag;
     if (d && d.gx != null) {
       var p = this.tray[d.i], ok = this.canPlace(p.cells, d.gx, d.gy);
@@ -957,7 +996,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     }
     for (i = 0; i < 3; i++) {
       var sl = this.slots[i];
-      rr(c, sl.x - 4, sl.y - 4, sl.w + 8, sl.h + 8, 12); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill();
+      rr(c, sl.x - 4, sl.y - 4, sl.w + 8, sl.h + 8, 12); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 2; c.stroke();
       if (!this.tray[i] || (d && d.i === i)) continue;
       var sc = this.slotCells(i, sl.ts, sl.x + sl.w / 2, sl.y + sl.h / 2);
       sc.p.cells.forEach(function (q) { drawDie(c, sc.x + q[0] * sl.ts, sc.y + q[1] * sl.ts, sl.ts, q[2]); });
@@ -1934,6 +1973,10 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       row({ x: this.mx, w: this.mw, v: [6, 1, 5, 2, 4, 3] }, y, 1);
       var top = this.top();
       c.setLineDash([5, 5]); c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 2;
+      // precision ring: the zone where a drop counts as perfect (it narrows with level)
+      var tol = Math.max(3, this.speed() * this.win), ty = this.baseY - this.blocks.length * bh, near = Math.abs(this.mx - top.x) <= tol;
+      c.fillStyle = near ? 'rgba(140,233,154,0.95)' : 'rgba(255,212,59,0.85)';
+      rr(c, top.x - tol, ty - 5, tol * 2, 5, 2); c.fill(); rr(c, top.x + top.w - tol, ty - 5, tol * 2, 5, 2); c.fill();
       c.beginPath(); c.moveTo(top.x, y + bh); c.lineTo(top.x, this.baseY - this.blocks.length * bh); c.moveTo(top.x + top.w, y + bh); c.lineTo(top.x + top.w, this.baseY - this.blocks.length * bh); c.stroke(); c.setLineDash([]);
     }
     c.restore();
@@ -2104,6 +2147,11 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       if (d.o) {
         var f = this.flip[i];
         drawDie(c, x, y, s, d.v, { color: COLOR[d.o], scale: f ? 1 + f * 0.3 : 1, stroke: f ? '#fff' : null });
+        // owner marker so colour is never the only cue: circle = you, diamond = computer
+        var mx = x + s * 0.82, my = y + s * 0.82, mr = s * 0.08;
+        c.fillStyle = '#fff'; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 1.5; c.beginPath();
+        if (d.o === ME) c.arc(mx, my, mr, 0, 6.2832); else { c.moveTo(mx, my - mr * 1.3); c.lineTo(mx + mr * 1.3, my); c.lineTo(mx, my + mr * 1.3); c.lineTo(mx - mr * 1.3, my); c.closePath(); }
+        c.fill(); c.stroke();
       }
       if (prev[i]) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = '#ffd43b'; c.lineWidth = 3; c.stroke(); }
       if (this.hint === i && this.hintT > 0) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = 'rgba(140,233,154,' + (0.5 + 0.5 * Math.sin(this.env.t * 8)) + ')'; c.lineWidth = 4; c.stroke(); }
@@ -2111,8 +2159,16 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var sm = sums(this.b), bw = s * N, px, py, pw;
     if (this.land) { px = ox + bw + 20; pw = W - px - 10; py = oy; } else { px = 10; pw = W - 20; py = oy + bw + 14; }
     var cy = py + 24;
-    text(c, 'You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
-    text(c, 'CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
+    // turn bar: the side whose turn it is glows, the other dims
+    if (this.state === 'play') {
+      var pul = 0.75 + 0.25 * Math.sin(this.env.t * 6);
+      [ME, CPU].forEach(function (who) {
+        var bx = px + pw * (who === ME ? 0.25 : 0.75) - pw * 0.19;
+        rr(c, bx, cy - 26, pw * 0.38, 6, 3); c.fillStyle = COLOR[who]; c.globalAlpha = this.turn === who ? pul : 0.18; c.fill(); c.globalAlpha = 1;
+      }, this);
+    }
+    text(c, '● You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
+    text(c, '◆ CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
     if (!this.env.timed) {
       var wr = '', k; for (k = 0; k < 2; k++) wr += (k < this.wins[ME] ? '🏆' : '▫️') + ' ';
       text(c, wr, px + pw * 0.25, cy + 34, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
@@ -2231,6 +2287,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
     $('#rankBar').style.width = (100 * rk.into / rk.need) + '%';
     $('#gift').classList.toggle('rdy', Prog.giftReady(save, today()));
+    $('#navAlbum').classList.toggle('dot', save.stickers.length > (save.seenStk || 0));
     $('#navSound').firstChild.textContent = save.sound ? '🔊' : '🔇';
     var h = '';
     ORDER.forEach(function (id) {
@@ -2284,12 +2341,20 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     SKINS.forEach(function (s, i) {
       var own = save.skins.indexOf(i) >= 0;
       h += '<div class="skin' + (save.skin === i ? ' sel' : '') + '"><b>' + s.name + '</b><div class="sw">' + s.faces.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</div>' +
-        '<button data-skin="' + i + '" class="' + (own ? '' : 'pri') + '">' + (save.skin === i ? 'In use' : own ? 'Use' : 'Buy 🪙 ' + s.price) + '</button></div>';
+        '<button data-skin="' + i + '" class="' + (own ? '' : 'pri') + (!own && save.coins < s.price ? ' poor' : '') + '">' + (save.skin === i ? '✔ In use' : own ? 'Use' : '🪙 ' + s.price) + '</button></div>';
     });
     $('#skins').innerHTML = h;
     $('#stkTitle').textContent = 'Stickers ' + save.stickers.length + ' / ' + Prog.STICKER_COUNT;
     var sh = '';
-    for (var i = 0; i < Prog.STICKER_COUNT; i++) sh += '<div class="stk ' + (save.stickers.indexOf(i) >= 0 ? '' : 'no') + '">' + (save.stickers.indexOf(i) >= 0 ? STICKERS[i] : '❔') + '</div>';
+    var fresh = {}, order = [], seen = save.seenStk || 0, j;
+    for (j = seen; j < save.stickers.length; j++) { fresh[save.stickers[j]] = 1; order.push(save.stickers[j]); }     // new ones first
+    for (j = 0; j < Prog.STICKER_COUNT; j++) if (save.stickers.indexOf(j) >= 0 && !fresh[j]) order.push(j);          // then owned, by number
+    for (j = 0; j < Prog.STICKER_COUNT; j++) if (save.stickers.indexOf(j) < 0) order.push(j);                          // missing last
+    order.forEach(function (n) {
+      var own = save.stickers.indexOf(n) >= 0;
+      sh += '<div class="stk ' + (own ? '' : 'no') + '">' + (own ? '' : '<u>?</u>') + '<span>' + STICKERS[n] + '</span>' + (fresh[n] ? '<i class="nw"></i>' : '') + '</div>';
+    });
+    save.seenStk = save.stickers.length; persist();
     $('#stickers').innerHTML = sh;
   }
 
@@ -2313,7 +2378,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     closeModal();
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
-    run.challenge = false;
+    run.challenge = false; $('#play').dataset.urg = 0;
     if (wantChal && !timed && save.tokens > 0) { save.tokens--; run.challenge = true; persist(); }
     fx = []; parts = []; paused = false; overT = 0; clearTimeout(sayT); $('#say').classList.remove('go'); $('#say').textContent = '';
     $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : (Prog.isBoss(level) ? '👑 Boss ' : '') + 'Level ' + level) + (run.challenge ? ' ⚔' : '');
@@ -2343,8 +2408,14 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   }
   function updateHud() {
     if (!run) return;
-    $('#hudScore').textContent = fmt(run.score);
-    var left = run.timed ? '⏱ ' + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
+    var hs = $('#hudScore'), st = fmt(run.score);
+    if (hs.textContent !== st) { hs.textContent = st; if (save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
+    var urg = 0;
+    if (run.timed) { var fr = run.timeLeft / G.timedSecs; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
+    else if (G.id === 'rush' && run.game.lives === 1) urg = 1;
+    if ($('#play').dataset.urg !== String(urg)) $('#play').dataset.urg = urg;
+    if (run.timed && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
+    var left = run.timed ? (urg === 2 ? '⏳ ' : '⏱ ') + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
     if (G.id === 'duel' && !run.timed) left = '';
     $('#hudLeft').textContent = left;
     if (run.timed) $('#tbar').firstChild.style.width = (100 * run.timeLeft / G.timedSecs) + '%';
@@ -2412,7 +2483,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     if (out.boss) h += '<div class="reveal"><div class="em">👑' + (out.boss.sticker != null ? STICKERS[out.boss.sticker] : '') + '</div>Boss beaten!' + (out.boss.sticker != null ? ' New sticker!' : '') + '</div>';
     if (out.token) h += '<div class="reveal">🎖 +' + out.token + ' Courage Token (now ' + (save.tokens || 0) + ')</div>';
     if (out.tokenLost) h += '<div class="sub">⚔ Challenge lost: only the token is gone. Your coins and stars are safe.</div>';
-    if (out.chest) h += '<div class="reveal"><div class="em">🎁' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '') + '</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
+    if (out.chest) h += '<div class="reveal" id="chestBox" data-open="' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '🎉') + '"><div class="em shake">🎁</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
     out.ranks.forEach(function (r) { h += '<div class="reveal"><div class="em">🏅' + (r.sticker != null ? STICKERS[r.sticker] : '') + '</div>Rank up! Rank ' + r.rank + ' · ' + rankName(r.rank) + '<br>+' + r.coins + ' 🪙' + (r.sticker != null ? ' and a new sticker' : '') + '</div>'; });
     if (out.unlocked) h += '<div class="reveal">🔓 Level ' + out.unlocked + ' unlocked!</div>';
     h += '<div class="btns">';
@@ -2421,6 +2492,19 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     modal(h);
     var spans = document.querySelectorAll('#rs span');
     for (i = 0; i < res.stars; i++) (function (k) { setTimeout(function () { if (spans[k]) { spans[k].classList.add('on'); sfx('star'); } }, 300 + k * 350); })(i);
+    // reward sequence: coins and XP count up, the chest shakes then opens; a tap on the sheet skips to the end
+    var pills = document.querySelectorAll('.rew .pill'), cb = $('#chestBox'), timers = [];
+    var finish = function () { timers.forEach(clearTimeout); timers = []; pills.forEach(function (p) { p.textContent = p.dataset.fin; }); if (cb) { cb.firstChild.className = 'em'; cb.firstChild.textContent = '🎁' + cb.dataset.open; } };
+    pills.forEach(function (p) { p.dataset.fin = p.textContent; });
+    if (save.set.motion) {
+      pills.forEach(function (p) {
+        var m = p.dataset.fin.match(/^\+(\d+)(.*)$/); if (!m) return;
+        var n = +m[1], t0 = performance.now();
+        (function tick() { var k = Math.min(1, (performance.now() - t0) / 700); p.textContent = '+' + Math.round(n * k) + m[2]; if (k < 1 && p.dataset.fin) timers.push(setTimeout(tick, 40)); })();
+      });
+      if (cb) timers.push(setTimeout(function () { cb.firstChild.className = 'em'; cb.firstChild.textContent = '🎁' + cb.dataset.open; sfx('win'); }, 1100));
+    } else finish();
+    document.querySelector('.dlg').addEventListener('click', function (e) { if (!e.target.closest('button')) finish(); });
     sfx(won ? 'win' : 'bad');
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
   }

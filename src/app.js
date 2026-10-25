@@ -70,6 +70,7 @@
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
     $('#rankBar').style.width = (100 * rk.into / rk.need) + '%';
     $('#gift').classList.toggle('rdy', Prog.giftReady(save, today()));
+    $('#navAlbum').classList.toggle('dot', save.stickers.length > (save.seenStk || 0));
     $('#navSound').firstChild.textContent = save.sound ? '🔊' : '🔇';
     var h = '';
     ORDER.forEach(function (id) {
@@ -123,12 +124,20 @@
     SKINS.forEach(function (s, i) {
       var own = save.skins.indexOf(i) >= 0;
       h += '<div class="skin' + (save.skin === i ? ' sel' : '') + '"><b>' + s.name + '</b><div class="sw">' + s.faces.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</div>' +
-        '<button data-skin="' + i + '" class="' + (own ? '' : 'pri') + '">' + (save.skin === i ? 'In use' : own ? 'Use' : 'Buy 🪙 ' + s.price) + '</button></div>';
+        '<button data-skin="' + i + '" class="' + (own ? '' : 'pri') + (!own && save.coins < s.price ? ' poor' : '') + '">' + (save.skin === i ? '✔ In use' : own ? 'Use' : '🪙 ' + s.price) + '</button></div>';
     });
     $('#skins').innerHTML = h;
     $('#stkTitle').textContent = 'Stickers ' + save.stickers.length + ' / ' + Prog.STICKER_COUNT;
     var sh = '';
-    for (var i = 0; i < Prog.STICKER_COUNT; i++) sh += '<div class="stk ' + (save.stickers.indexOf(i) >= 0 ? '' : 'no') + '">' + (save.stickers.indexOf(i) >= 0 ? STICKERS[i] : '❔') + '</div>';
+    var fresh = {}, order = [], seen = save.seenStk || 0, j;
+    for (j = seen; j < save.stickers.length; j++) { fresh[save.stickers[j]] = 1; order.push(save.stickers[j]); }     // new ones first
+    for (j = 0; j < Prog.STICKER_COUNT; j++) if (save.stickers.indexOf(j) >= 0 && !fresh[j]) order.push(j);          // then owned, by number
+    for (j = 0; j < Prog.STICKER_COUNT; j++) if (save.stickers.indexOf(j) < 0) order.push(j);                          // missing last
+    order.forEach(function (n) {
+      var own = save.stickers.indexOf(n) >= 0;
+      sh += '<div class="stk ' + (own ? '' : 'no') + '">' + (own ? '' : '<u>?</u>') + '<span>' + STICKERS[n] + '</span>' + (fresh[n] ? '<i class="nw"></i>' : '') + '</div>';
+    });
+    save.seenStk = save.stickers.length; persist();
     $('#stickers').innerHTML = sh;
   }
 
@@ -152,7 +161,7 @@
     closeModal();
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
-    run.challenge = false;
+    run.challenge = false; $('#play').dataset.urg = 0;
     if (wantChal && !timed && save.tokens > 0) { save.tokens--; run.challenge = true; persist(); }
     fx = []; parts = []; paused = false; overT = 0; clearTimeout(sayT); $('#say').classList.remove('go'); $('#say').textContent = '';
     $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : (Prog.isBoss(level) ? '👑 Boss ' : '') + 'Level ' + level) + (run.challenge ? ' ⚔' : '');
@@ -182,8 +191,14 @@
   }
   function updateHud() {
     if (!run) return;
-    $('#hudScore').textContent = fmt(run.score);
-    var left = run.timed ? '⏱ ' + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
+    var hs = $('#hudScore'), st = fmt(run.score);
+    if (hs.textContent !== st) { hs.textContent = st; if (save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
+    var urg = 0;
+    if (run.timed) { var fr = run.timeLeft / G.timedSecs; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
+    else if (G.id === 'rush' && run.game.lives === 1) urg = 1;
+    if ($('#play').dataset.urg !== String(urg)) $('#play').dataset.urg = urg;
+    if (run.timed && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
+    var left = run.timed ? (urg === 2 ? '⏳ ' : '⏱ ') + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
     if (G.id === 'duel' && !run.timed) left = '';
     $('#hudLeft').textContent = left;
     if (run.timed) $('#tbar').firstChild.style.width = (100 * run.timeLeft / G.timedSecs) + '%';
@@ -251,7 +266,7 @@
     if (out.boss) h += '<div class="reveal"><div class="em">👑' + (out.boss.sticker != null ? STICKERS[out.boss.sticker] : '') + '</div>Boss beaten!' + (out.boss.sticker != null ? ' New sticker!' : '') + '</div>';
     if (out.token) h += '<div class="reveal">🎖 +' + out.token + ' Courage Token (now ' + (save.tokens || 0) + ')</div>';
     if (out.tokenLost) h += '<div class="sub">⚔ Challenge lost: only the token is gone. Your coins and stars are safe.</div>';
-    if (out.chest) h += '<div class="reveal"><div class="em">🎁' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '') + '</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
+    if (out.chest) h += '<div class="reveal" id="chestBox" data-open="' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '🎉') + '"><div class="em shake">🎁</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
     out.ranks.forEach(function (r) { h += '<div class="reveal"><div class="em">🏅' + (r.sticker != null ? STICKERS[r.sticker] : '') + '</div>Rank up! Rank ' + r.rank + ' · ' + rankName(r.rank) + '<br>+' + r.coins + ' 🪙' + (r.sticker != null ? ' and a new sticker' : '') + '</div>'; });
     if (out.unlocked) h += '<div class="reveal">🔓 Level ' + out.unlocked + ' unlocked!</div>';
     h += '<div class="btns">';
@@ -260,6 +275,19 @@
     modal(h);
     var spans = document.querySelectorAll('#rs span');
     for (i = 0; i < res.stars; i++) (function (k) { setTimeout(function () { if (spans[k]) { spans[k].classList.add('on'); sfx('star'); } }, 300 + k * 350); })(i);
+    // reward sequence: coins and XP count up, the chest shakes then opens; a tap on the sheet skips to the end
+    var pills = document.querySelectorAll('.rew .pill'), cb = $('#chestBox'), timers = [];
+    var finish = function () { timers.forEach(clearTimeout); timers = []; pills.forEach(function (p) { p.textContent = p.dataset.fin; }); if (cb) { cb.firstChild.className = 'em'; cb.firstChild.textContent = '🎁' + cb.dataset.open; } };
+    pills.forEach(function (p) { p.dataset.fin = p.textContent; });
+    if (save.set.motion) {
+      pills.forEach(function (p) {
+        var m = p.dataset.fin.match(/^\+(\d+)(.*)$/); if (!m) return;
+        var n = +m[1], t0 = performance.now();
+        (function tick() { var k = Math.min(1, (performance.now() - t0) / 700); p.textContent = '+' + Math.round(n * k) + m[2]; if (k < 1 && p.dataset.fin) timers.push(setTimeout(tick, 40)); })();
+      });
+      if (cb) timers.push(setTimeout(function () { cb.firstChild.className = 'em'; cb.firstChild.textContent = '🎁' + cb.dataset.open; sfx('win'); }, 1100));
+    } else finish();
+    document.querySelector('.dlg').addEventListener('click', function (e) { if (!e.target.closest('button')) finish(); });
     sfx(won ? 'win' : 'bad');
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
   }

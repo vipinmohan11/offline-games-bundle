@@ -212,6 +212,9 @@
       var f = clr[r * 10 + cc], blink = f && Math.floor(this.env.t * 20) % 2;
       drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc], { alpha: f ? (blink ? 0.4 : 1) : 1, scale: f ? 1.1 : 1, stroke: f ? '#fff' : null });
     }
+    var dl = oy + (ROWS - 8) * s;    // danger line: the stack is one piece away from trouble (3 rows from the top)
+    c.save(); c.setLineDash([6, 6]); c.strokeStyle = this.hot ? 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')' : 'rgba(255,255,255,0.14)'; c.lineWidth = 2;
+    c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
     var cur = this.cur;
     if (cur && this.state === 'fall') {
       var gy = this.land(cur.cells, cur.x);

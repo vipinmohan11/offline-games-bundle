@@ -74,7 +74,7 @@ const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL: ' + m); } };
     const after = await page.evaluate(() => ({ coins: document.querySelector('#coins').textContent, cards: [...document.querySelectorAll('.st')].map(e => e.textContent) }));
     ok(after.cards.every(t => /Lv 2/.test(t)), 'after reload every game offers level 2: ' + after.cards.join(' | '));
     // daily gift, album, shop
-    await page.click('#gift'); await page.waitForSelector('.gdays'); await page.click('#mClose');
+    await page.click('#gift', { force: true }); await page.waitForSelector('.gdays'); await page.click('#mClose');
     await page.click('#navAlbum'); await page.waitForSelector('.skin');
     await page.screenshot({ path: path.join(OUT, v.name + '-album.png') });
     await page.click('#alBack');

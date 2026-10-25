@@ -46,7 +46,7 @@ var Prog = (function () {
   }
 
   function newSave() {
-    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0,
+    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0, seenStk: 0,
       skin: 0, skins: [0], gift: { last: '', streak: 0 }, sound: true, flowers: 0, plays: 0, seen: {} };
   }
   function rankOf(xp) {

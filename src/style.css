@@ -150,3 +150,31 @@ body.t-forest{--bg:#0f2417;--card:#183a26;--card2:#255238}
   .gcard{max-height:210px}
 }
 @media (max-width:520px){.hdr{flex-wrap:wrap}.hdr h2{flex:1}.hdr .tabs{order:5;flex-basis:100%;max-width:none}}
+
+/* urgency: calm -> orange (under 25%) -> red (last 10 s). Colour is paired with an icon change and a pulse. */
+#stage::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:10px;opacity:0}
+#play[data-urg="1"] .tbar i{background:#ff922b}
+#play[data-urg="2"] .tbar i{background:#ff4d4d}
+#play[data-urg="2"] #hudLeft{color:#ff6b6b}
+#play[data-urg="1"] #stage::after{box-shadow:inset 0 0 0 3px rgba(255,146,43,.55);opacity:1}
+#play[data-urg="2"] #stage::after{box-shadow:inset 0 0 0 4px rgba(255,77,77,.8);animation:urgp 1s ease-in-out infinite}
+@keyframes urgp{50%{opacity:.25}}
+
+/* album: missing stickers are grey silhouettes with a ?, new ones carry a gold dot */
+.stk{position:relative;border:2px solid var(--card2)}
+.stk.no{opacity:1;filter:none}.stk.no span{filter:brightness(0);opacity:.22}
+.stk u{position:absolute;text-decoration:none;font-size:16px;font-weight:900;color:var(--muted);z-index:1}
+.stk .nw{position:absolute;top:3px;right:3px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)}
+.dock button.dot{position:relative}.dock button.dot::after{content:"";position:absolute;top:4px;right:6px;width:12px;height:12px;border-radius:50%;background:var(--gold);border:2px solid var(--bg)}
+.skin button.poor{background:var(--card2);color:var(--bad)}
+
+.em.shake{display:inline-block;animation:shk .45s ease-in-out infinite}
+@keyframes shk{25%{transform:rotate(-12deg)}75%{transform:rotate(12deg)}}
+
+/* squish and bounce: buttons dip on press and spring back; the score bumps when it grows */
+button{transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s}
+button:active{transform:scale(.95) translateY(2px)}
+#hudScore{display:inline-block}
+#hudScore.bump{animation:bump .16s ease-out}
+@keyframes bump{50%{transform:scale(1.18)}}
+.gcard,.lv{transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s}

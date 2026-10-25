@@ -149,6 +149,11 @@
       if (d.o) {
         var f = this.flip[i];
         drawDie(c, x, y, s, d.v, { color: COLOR[d.o], scale: f ? 1 + f * 0.3 : 1, stroke: f ? '#fff' : null });
+        // owner marker so colour is never the only cue: circle = you, diamond = computer
+        var mx = x + s * 0.82, my = y + s * 0.82, mr = s * 0.08;
+        c.fillStyle = '#fff'; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 1.5; c.beginPath();
+        if (d.o === ME) c.arc(mx, my, mr, 0, 6.2832); else { c.moveTo(mx, my - mr * 1.3); c.lineTo(mx + mr * 1.3, my); c.lineTo(mx, my + mr * 1.3); c.lineTo(mx - mr * 1.3, my); c.closePath(); }
+        c.fill(); c.stroke();
       }
       if (prev[i]) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = '#ffd43b'; c.lineWidth = 3; c.stroke(); }
       if (this.hint === i && this.hintT > 0) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = 'rgba(140,233,154,' + (0.5 + 0.5 * Math.sin(this.env.t * 8)) + ')'; c.lineWidth = 4; c.stroke(); }
@@ -156,8 +161,16 @@
     var sm = sums(this.b), bw = s * N, px, py, pw;
     if (this.land) { px = ox + bw + 20; pw = W - px - 10; py = oy; } else { px = 10; pw = W - 20; py = oy + bw + 14; }
     var cy = py + 24;
-    text(c, 'You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
-    text(c, 'CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
+    // turn bar: the side whose turn it is glows, the other dims
+    if (this.state === 'play') {
+      var pul = 0.75 + 0.25 * Math.sin(this.env.t * 6);
+      [ME, CPU].forEach(function (who) {
+        var bx = px + pw * (who === ME ? 0.25 : 0.75) - pw * 0.19;
+        rr(c, bx, cy - 26, pw * 0.38, 6, 3); c.fillStyle = COLOR[who]; c.globalAlpha = this.turn === who ? pul : 0.18; c.fill(); c.globalAlpha = 1;
+      }, this);
+    }
+    text(c, '● You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
+    text(c, '◆ CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
     if (!this.env.timed) {
       var wr = '', k; for (k = 0; k < 2; k++) wr += (k < this.wins[ME] ? '🏆' : '▫️') + ' ';
       text(c, wr, px + pw * 0.25, cy + 34, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';

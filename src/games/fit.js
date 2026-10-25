@@ -168,6 +168,14 @@
       rr(c, ox + cc * s + 2, oy + r * s + 2, s - 4, s - 4, s * 0.15); c.fillStyle = 'rgba(255,255,255,0.05)'; c.fill();
       if (this.g[r][cc]) drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc]);
     }
+    // rows and columns that are one die from full glow softly
+    var gl, gr, gc, rowN, colN;
+    for (gl = 0; gl < N; gl++) {
+      rowN = 0; colN = 0;
+      for (gr = 0; gr < N; gr++) { if (this.g[gl][gr]) rowN++; if (this.g[gr][gl]) colN++; }
+      if (rowN === N - 1) { rr(c, ox, oy + gl * s, N * s, s, s * 0.2); c.fillStyle = 'rgba(255,212,59,0.13)'; c.fill(); }
+      if (colN === N - 1) { rr(c, ox + gl * s, oy, s, N * s, s * 0.2); c.fillStyle = 'rgba(255,212,59,0.13)'; c.fill(); }
+    }
     var d = this.drag;
     if (d && d.gx != null) {
       var p = this.tray[d.i], ok = this.canPlace(p.cells, d.gx, d.gy);
@@ -187,7 +195,7 @@
     }
     for (i = 0; i < 3; i++) {
       var sl = this.slots[i];
-      rr(c, sl.x - 4, sl.y - 4, sl.w + 8, sl.h + 8, 12); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill();
+      rr(c, sl.x - 4, sl.y - 4, sl.w + 8, sl.h + 8, 12); c.fillStyle = 'rgba(255,255,255,0.06)'; c.fill(); c.strokeStyle = 'rgba(255,255,255,0.22)'; c.lineWidth = 2; c.stroke();
       if (!this.tray[i] || (d && d.i === i)) continue;
       var sc = this.slotCells(i, sl.ts, sl.x + sl.w / 2, sl.y + sl.h / 2);
       sc.p.cells.forEach(function (q) { drawDie(c, sc.x + q[0] * sl.ts, sc.y + q[1] * sl.ts, sl.ts, q[2]); });

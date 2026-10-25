@@ -114,6 +114,10 @@
       row({ x: this.mx, w: this.mw, v: [6, 1, 5, 2, 4, 3] }, y, 1);
       var top = this.top();
       c.setLineDash([5, 5]); c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 2;
+      // precision ring: the zone where a drop counts as perfect (it narrows with level)
+      var tol = Math.max(3, this.speed() * this.win), ty = this.baseY - this.blocks.length * bh, near = Math.abs(this.mx - top.x) <= tol;
+      c.fillStyle = near ? 'rgba(140,233,154,0.95)' : 'rgba(255,212,59,0.85)';
+      rr(c, top.x - tol, ty - 5, tol * 2, 5, 2); c.fill(); rr(c, top.x + top.w - tol, ty - 5, tol * 2, 5, 2); c.fill();
       c.beginPath(); c.moveTo(top.x, y + bh); c.lineTo(top.x, this.baseY - this.blocks.length * bh); c.moveTo(top.x + top.w, y + bh); c.lineTo(top.x + top.w, this.baseY - this.blocks.length * bh); c.stroke(); c.setLineDash([]);
     }
     c.restore();
