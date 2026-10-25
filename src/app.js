@@ -8,6 +8,8 @@
     '⚽', '🏀', '🚀', '🛸', '🚂', '🚁', '⛵', '🎈', '🌈', '⭐', '🌙', '☀️', '🎸', '🥁', '🎨', '🏆'];
   var RANKS = ['Rookie Roller', 'Dice Cadet', 'Pip Pilot', 'Lucky Roller', 'Dice Knight', 'Dice Wizard', 'Dice Master', 'Dice Legend'];
   var KEY = 'diceArcade.v1';
+  var VERSION = '2.0', BUILD = '__BUILD__';
+  var DEF_SET = { vol: 0.8, vibe: true, motion: true, hints: true, text: 1, theme: 'night', big: false, lefty: false, name: '' };
   var $ = function (s) { return document.querySelector(s); };
   var save, run = null, G = null, curGame = null, paused = false, last = 0, raf = 0, overT = 0;
   var cv, ctx, dpr = 1, fx = [], parts = [], sayT = 0;
@@ -16,10 +18,11 @@
   function load() {
     try {
       var s = JSON.parse(localStorage.getItem(KEY)), d = Prog.newSave();
-      if (s && s.v === 1) { for (var k in d) if (!(k in s)) s[k] = d[k]; return s; }
+      if (s && s.v === 1) { for (var k in d) if (!(k in s)) s[k] = d[k]; fixSet(s); return s; }
     } catch (e) {}
-    return Prog.newSave();
+    var n = Prog.newSave(); fixSet(n); return n;
   }
+  function fixSet(s) { s.set = s.set || {}; for (var k in DEF_SET) if (!(k in s.set)) s.set[k] = DEF_SET[k]; }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function rankName(r) { return RANKS[Math.min(RANKS.length - 1, Math.floor((r - 1) / 4))]; }
@@ -31,11 +34,12 @@
     var o = ac.createOscillator(), g = ac.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(f, ac.currentTime + t0);
     g.gain.setValueAtTime(0.0001, ac.currentTime + t0);
-    g.gain.exponentialRampToValueAtTime(vol || 0.15, ac.currentTime + t0 + 0.01);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, (vol || 0.15) * save.set.vol / 0.8), ac.currentTime + t0 + 0.01);
     g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + t0 + d);
     o.connect(g); g.connect(ac.destination); o.start(ac.currentTime + t0); o.stop(ac.currentTime + t0 + d + 0.02);
   }
   function sfx(k) {
+    if (save && save.set.vibe && navigator.vibrate && (k === 'bad' || k === 'win' || k === 'combo')) { try { navigator.vibrate(k === 'bad' ? 40 : k === 'win' ? 80 : 15); } catch (e) {} }
     if (!save || !save.sound) return;
     try {
       if (!ac) ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -51,7 +55,7 @@
   }
 
   /* ---------- screens ---------- */
-  var screens = ['home', 'levels', 'album', 'play'];
+  var screens = ['home', 'levels', 'album', 'settings', 'play'];
   function show(id) { screens.forEach(function (s) { $('#' + s).classList.toggle('hidden', s !== id); }); }
   function modal(html) { var m = $('#modal'); m.innerHTML = '<div class="dlg">' + html + '</div>'; m.classList.remove('hidden'); }
   function closeModal() { var m = $('#modal'); m.classList.add('hidden'); m.innerHTML = ''; }
@@ -60,6 +64,7 @@
 
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
+    $('.brand').textContent = save.set.name ? '🎲 ' + save.set.name + '\'s Dice Arcade' : '🎲 Dice Arcade';
     var rk = Prog.rankOf(save.xp);
     $('#rankName').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank);
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
@@ -138,7 +143,7 @@
   }
   var ui = {
     fx: function (x, y, t, color) { if (x == null) { x = run.W / 2; y = run.H / 3; } fx.push({ x: x, y: y, t: 0, s: t, c: color || '#fff' }); },
-    burst: function (x, y, color, n) { for (var i = 0; i < (n || 6); i++) parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 320, vy: -Math.random() * 260 - 40, t: 0, c: color || '#fff' }); },
+    burst: function (x, y, color, n) { if (!save.set.motion) return; for (var i = 0; i < (n || 6); i++) parts.push({ x: x, y: y, vx: (Math.random() - 0.5) * 320, vy: -Math.random() * 260 - 40, t: 0, c: color || '#fff' }); },
     sfx: sfx,
     say: function (s) { var e = $('#say'); e.textContent = s; e.classList.remove('go'); void e.offsetWidth; e.classList.add('go'); clearTimeout(sayT); sayT = setTimeout(function () { e.classList.remove('go'); e.textContent = ''; }, 1150); }
   };
@@ -153,8 +158,9 @@
     $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : (Prog.isBoss(level) ? '👑 Boss ' : '') + 'Level ' + level) + (run.challenge ? ' ⚔' : '');
     buildMeter();
     var c = $('#ctl'); c.innerHTML = '';
-    c.classList.toggle('none', !G.controls.length);
+    c.classList.toggle('none', !G.controls.length || (G.controls.length === 1 && G.controls[0].k === 'hint' && !save.set.hints));
     G.controls.forEach(function (b) {
+      if (b.k === 'hint' && !save.set.hints) return;
       var e = document.createElement('button'); e.textContent = b.t; e.dataset.k = b.k;
       var fire = function (ev) { ev.preventDefault(); if (run && !paused && !run.over) { run.game.btn(b.k); } };
       e.addEventListener('pointerdown', fire);
@@ -290,6 +296,57 @@
       modal('<h2>🎁 Daily gift!</h2><div class="big">+' + g.coins + ' 🪙</div><div class="sub">Day ' + g.streak + ' of 7. Come back tomorrow for more!</div><div class="gdays">' + days + '</div>' +
         (g.sticker != null ? '<div class="reveal"><div class="em">' + STICKERS[g.sticker] + '</div>New sticker!</div>' : '') + '<div class="btns"><button class="pri" id="mClose">Yay!</button></div>');
     });
+    on('#navSet', 'click', function () { renderSettings(); show('settings'); });
+    on('#stBack', 'click', function () { renderHome(); show('home'); });
+    $('#stBody').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      if (b.dataset.tog) {
+        var k = b.dataset.tog;
+        if (k === 'sound') save.sound = !save.sound; else save.set[k] = !save.set[k];
+        persist(); applySettings(); renderSettings(); sfx('pop');
+      } else if (b.dataset.set) {
+        var v = b.dataset.val; save.set[b.dataset.set] = b.dataset.set === 'text' ? +v : v;
+        persist(); applySettings(); renderSettings(); sfx('tick');
+      } else if (b.id === 'exDl') {
+        try {
+          var blob = new Blob([JSON.stringify(save)], { type: 'application/json' }), u = URL.createObjectURL(blob), a = document.createElement('a');
+          a.href = u; a.download = 'dice-arcade-backup-' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+          setTimeout(function () { URL.revokeObjectURL(u); }, 2000); setMsg('Backup file saved to your Downloads.');
+        } catch (x) { setMsg('Could not create a file. Use "Copy save code" instead.'); }
+      } else if (b.id === 'exCp') {
+        var code = saveCode(), ta = $('#imTxt');
+        var done = function () { setMsg('Save code copied. Paste it somewhere safe.'); };
+        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code).then(done, function () { ta.value = code; ta.select(); setMsg('Copy the code from the box.'); });
+        else { ta.value = code; ta.select(); setMsg('Copy the code from the box.'); }
+      } else if (b.id === 'imGo') {
+        var s = importData($('#imTxt').value);
+        if (!s) { setMsg('That code does not look right. Nothing was changed.'); sfx('bad'); return; }
+        modal('<h2>Restore this save?</h2><p class="sub">It has ' + fmt(s.coins) + ' coins and ' + Object.keys(s.stars).length + ' games of progress. Your current progress will be replaced.</p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="mImport">Restore</button></div>');
+        window.__pendingImport = s;
+      } else if (b.id === 'reset') askReset();
+      else if (b.id === 'imFile') $('#imPick').click();
+      else if (b.id === 'stTut') { save.seen = {}; persist(); setMsg('Tutorials will show again the first time you open each game.'); }
+      else if (b.id === 'stDef') { save.set = {}; fixSet(save); persist(); applySettings(); renderSettings(); }
+      else if (b.id === 'stUpd') {
+        var um = $('#updMsg'); um.textContent = 'Checking…';
+        var fin = function () { um.textContent = 'Loading the latest version…'; setTimeout(function () { location.reload(); }, 400); };
+        if (location.protocol.indexOf('http') !== 0) { um.textContent = 'You are running a saved file. To update, open the new index.html file (or the web link) instead.'; return; }
+        Promise.resolve(navigator.serviceWorker && navigator.serviceWorker.getRegistrations ? navigator.serviceWorker.getRegistrations() : []).then(function (rs) { return Promise.all(rs.map(function (r) { return r.unregister(); })); })
+          .then(function () { return window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : 0; }).then(fin, fin);
+      }
+    });
+    $('#stBody').addEventListener('input', function (e) {
+      if (e.target.id === 'setVol') { save.set.vol = +e.target.value; persist(); }
+      else if (e.target.id === 'setName') { save.set.name = e.target.value.replace(/[<>"&]/g, '').slice(0, 14); persist(); }
+    });
+    $('#stBody').addEventListener('change', function (e) {
+      if (e.target.id === 'setVol') sfx('pop');
+      if (e.target.id === 'imPick' && e.target.files && e.target.files[0]) {
+        var fr = new FileReader();
+        fr.onload = function () { $('#imTxt').value = String(fr.result).slice(0, 2000000); var s = importData(fr.result); setMsg(s ? 'File read. Tap "Restore from code" to continue.' : 'That file does not look right.'); };
+        fr.readAsText(e.target.files[0]);
+      }
+    });
     on('#navAlbum', 'click', function () { renderAlbum(); show('album'); });
     on('#navSound', 'click', function () { save.sound = !save.sound; persist(); renderHome(); sfx('pop'); });
     on('#alBack', 'click', function () { renderHome(); show('home'); });
@@ -299,14 +356,15 @@
       if (save.skins.indexOf(i) < 0) { if (save.coins < s.price) { sfx('bad'); b.textContent = 'Need ' + (s.price - save.coins) + ' more 🪙'; return; } save.coins -= s.price; save.skins.push(i); sfx('win'); }
       save.skin = i; setSkin(i); persist(); renderAlbum();
     });
-    on('#reset', 'click', function () { modal('<h2>Reset everything?</h2><p class="sub">All stars, coins and stickers will be deleted.</p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="mReset">Reset</button></div>'); });
+    var askReset = function () { modal('<h2>Reset everything?</h2><p class="sub">All stars, coins and stickers will be deleted.</p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="mReset">Reset</button></div>'); };
     on('#pause', 'click', function () { doPause(); });
     $('#modal').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       var id = b.id;
       if (id === 'mClose') closeModal();
       else if (id === 'mGo') { closeModal(); paused = false; last = performance.now(); }
-      else if (id === 'mReset') { save = Prog.newSave(); persist(); setSkin(0); closeModal(); renderHome(); show('home'); }
+      else if (id === 'mImport' && window.__pendingImport) { save = window.__pendingImport; window.__pendingImport = null; persist(); setSkin(save.skin || 0); applySettings(); closeModal(); renderHome(); show('home'); }
+      else if (id === 'mReset') { save = Prog.newSave(); fixSet(save); persist(); setSkin(0); applySettings(); closeModal(); renderHome(); show('home'); }
       else if (id === 'pResume') { closeModal(); paused = false; last = performance.now(); }
       else if (id === 'pRestart' || id === 'rRetry') startRun(run.G.id, run.level, run.timed);
       else if (id === 'pQuit' || id === 'rBack') { closeModal(); run = null; cancelAnimationFrame(raf); openGame(curGame); }
@@ -319,8 +377,62 @@
     modal('<h2>Paused</h2><div class="btns" style="flex-direction:column"><button class="pri" id="pResume">▶ Resume</button><button id="pRestart">↻ Restart</button><button id="pQuit">Quit to levels</button></div>');
   }
 
+  /* ---------- settings ---------- */
+  function applySettings() {
+    var b = document.body, s = save.set;
+    b.classList.remove('t-ocean', 't-candy', 't-forest');
+    if (s.theme !== 'night') b.classList.add('t-' + s.theme);
+    b.classList.toggle('reduce', !s.motion); b.classList.toggle('lefty', !!s.lefty); b.classList.toggle('bigbtn', !!s.big);
+    $('#app').style.zoom = s.text === 1 ? '' : s.text;
+    var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = getComputedStyle(b).getPropertyValue('--bg') || '#12162b';
+  }
+  function seg(key, opts) {
+    return '<div class="seg">' + opts.map(function (o) { return '<button data-set="' + key + '" data-val="' + o[0] + '" class="' + (String(save.set[key]) === String(o[0]) ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>';
+  }
+  function tog(key, on) { return '<button class="tg ' + (on ? 'on' : '') + '" data-tog="' + key + '">' + (on ? 'On' : 'Off') + '</button>'; }
+  function renderSettings() {
+    var s = save.set, h = '';
+    h += '<div class="set"><h3>👤 Player</h3><div class="srow"><div class="lbl">Name<small>Shown on the home screen. Stays on this device.</small></div></div><input type="text" id="setName" maxlength="14" placeholder="Your name" value="' + (s.name || '').replace(/"/g, '') + '"></div>';
+    h += '<div class="set"><h3>🔊 Sound and feel</h3>' +
+      '<div class="srow"><div class="lbl">Sound effects</div>' + tog('sound', save.sound) + '</div>' +
+      '<div class="srow"><div class="lbl">Volume</div><input type="range" id="setVol" min="0" max="1" step="0.05" value="' + s.vol + '"></div>' +
+      '<div class="srow"><div class="lbl">Vibration<small>Short buzz on wins and mistakes (Android)</small></div>' + tog('vibe', s.vibe) + '</div>' +
+      '<div class="srow"><div class="lbl">Animations and sparkles<small>Turn off for calmer visuals</small></div>' + tog('motion', s.motion) + '</div></div>';
+    h += '<div class="set"><h3>🎮 Controls</h3>' +
+      '<div class="srow"><div class="lbl">Hint button 💡<small>Off hides the hint in games</small></div>' + tog('hints', s.hints) + '</div>' +
+      '<div class="srow"><div class="lbl">Big buttons<small>Larger control buttons for small hands</small></div>' + tog('big', s.big) + '</div>' +
+      '<div class="srow"><div class="lbl">Left-handed layout<small>Mirrors the button order</small></div>' + tog('lefty', s.lefty) + '</div></div>';
+    h += '<div class="set"><h3>🎨 Look</h3>' +
+      '<div class="srow"><div class="lbl">Theme</div>' + seg('theme', [['night', '🌙 Night'], ['ocean', '🌊 Ocean'], ['candy', '🍬 Candy'], ['forest', '🌲 Forest']]) + '</div>' +
+      '<div class="srow"><div class="lbl">Text and menu size</div>' + seg('text', [[0.9, 'S'], [1, 'M'], [1.15, 'L'], [1.3, 'XL']]) + '</div>' +
+      '<div class="note">Dice skins are in 🎨 Stickers &amp; Shop.</div></div>';
+    h += '<div class="set"><h3>💾 Save data</h3><div class="note">Everything is stored only on this device. Back it up before clearing browser data or changing phone.</div>' +
+      '<div class="btns"><button id="exDl">⬇ Download backup</button><button id="exCp">📋 Copy save code</button></div>' +
+      '<div class="note" style="margin-top:12px">Restore: paste a save code or choose a backup file.</div>' +
+      '<textarea id="imTxt" placeholder="Paste save code here"></textarea>' +
+      '<div class="btns"><button id="imGo">⬆ Restore from code</button><button id="imFile">📂 Choose backup file</button></div><input type="file" id="imPick" accept=".json,.txt,application/json,text/plain" class="hidden">' +
+      '<div class="note" id="stMsg"></div>' +
+      '<div class="btns"><button id="stTut">Show game tutorials again</button><button id="stDef">Reset settings</button></div>' +
+      '<div class="btns"><button class="ghost" id="reset">Reset all progress</button></div></div>';
+    h += '<div class="set"><h3>ℹ About</h3><div class="srow"><div class="lbl">Version<small>Dice Arcade ' + VERSION + ' · built ' + BUILD + ' · 50 levels per game</small></div></div>' +
+      '<div class="btns"><button id="stUpd">🔄 Check for update</button></div><div class="note" id="updMsg"></div></div>';
+    $('#stBody').innerHTML = h;
+  }
+  function saveCode() { return 'DICE1:' + btoa(unescape(encodeURIComponent(JSON.stringify(save)))); }
+  function importData(txt) {
+    try {
+      txt = String(txt || '').trim();
+      if (txt.indexOf('DICE1:') === 0) txt = decodeURIComponent(escape(atob(txt.slice(6))));
+      var s = JSON.parse(txt), d = Prog.newSave();
+      if (!s || s.v !== 1 || typeof s.coins !== 'number' || typeof s.xp !== 'number' || typeof s.stars !== 'object') return false;
+      for (var k in d) if (!(k in s)) s[k] = d[k];
+      fixSet(s); return s;
+    } catch (e) { return false; }
+  }
+  function setMsg(t) { var m = $('#stMsg'); if (m) m.textContent = t; }
+
   function init() {
-    save = load(); setSkin(save.skin || 0);
+    save = load(); setSkin(save.skin || 0); applySettings();
     wire(); renderHome(); show('home');
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
     window.__app = { get save() { return save; }, get run() { return run; }, startRun: startRun, Prog: Prog, Games: Games };

@@ -85,3 +85,21 @@ button.ghost{background:transparent;border:2px solid var(--card2)}
 h3{margin:14px 2px 8px}
 @media (min-width:900px){.cards{grid-template-columns:repeat(4,1fr)}.gcard{min-height:180px}}
 @media (prefers-reduced-motion:reduce){#say.go{animation:none;opacity:1}}
+
+.set{background:var(--card);border-radius:var(--r);padding:12px 14px;margin-bottom:12px}
+.set h3{margin:0 0 8px;font-size:16px}
+.srow{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid rgba(255,255,255,.06)}
+.srow:first-of-type{border-top:0}
+.srow label,.srow .lbl{font-weight:700;flex:1}.srow small{display:block;color:var(--muted);font-weight:500;font-size:12px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.seg button{min-height:40px;padding:6px 12px;background:var(--card2)}.seg button.on{background:var(--gold);color:#3a2a00}
+.tg{min-width:76px;min-height:40px;padding:6px 12px}.tg.on{background:var(--good);color:#06310f}
+input[type=range]{width:150px;accent-color:#ffd43b}
+.set input[type=text],.set textarea{width:100%;background:#0e1226;color:var(--text);border:2px solid var(--card2);border-radius:12px;padding:10px;font:inherit}
+.set textarea{min-height:70px;font-size:12px}
+.reduce *{animation-duration:.01ms!important;transition-duration:.01ms!important}
+body.lefty #ctl{flex-direction:row-reverse}
+body.bigbtn #ctl button{min-height:76px;font-size:26px}
+body.t-ocean{--bg:#0b2233;--card:#123a52;--card2:#1b5373}
+body.t-candy{--bg:#2b1236;--card:#43204f;--card2:#5e2d6e}
+body.t-forest{--bg:#0f2417;--card:#183a26;--card2:#255238}

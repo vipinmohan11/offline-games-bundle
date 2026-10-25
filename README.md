@@ -26,7 +26,7 @@ Works in any modern mobile or tablet browser (phones and 10–11" tablets, portr
 - Style rank (S/A/B/C) for every run, and a Gold Stamp for 3 stars with no mistakes.
 - Courage Tokens from chests unlock the Star Challenge: win 3 stars for double coins, and if you lose only the token is gone.
 - Timed mode per game with bronze/silver/gold medals.
-- Progress is saved on the device (local storage).
+- Progress is saved on the device (local storage). Settings cover sound, vibration, hints, themes, text size, left-handed layout, name, and backup/restore of save data.
 
 ## Play
 
