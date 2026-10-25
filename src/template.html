@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#12162b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Dice Arcade</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg">
+<style>
+/*CSS*/
+</style>
+</head>
+<body>
+<div id="app">
+  <section id="home" class="screen"><div class="wrap">
+    <div class="top"><div class="brand">🎲 Dice Arcade</div><div class="chip" id="coins">🪙 0</div></div>
+    <div class="rank"><div class="row"><span id="rankName"></span><span id="rankXp"></span></div><div class="bar"><i id="rankBar"></i></div></div>
+    <button class="gift hidden" id="gift">🎁 Daily gift ready - tap to open!</button>
+    <div class="cards" id="cards"></div>
+    <div class="nav"><button id="navAlbum">🎨 Stickers &amp; Shop</button><button id="navSound">🔊 Sound on</button></div>
+  </div></section>
+
+  <section id="levels" class="screen hidden"><div class="wrap">
+    <div class="hdr"><button id="lvBack">←</button><h2 id="lvTitle"></h2><div class="chip" id="lvCoins"></div></div>
+    <div class="how" id="lvHow"></div>
+    <div class="tabs"><button id="tabLv" class="on">Levels</button><button id="tabTm">⏱ Timed</button></div>
+    <div id="lvBody"></div>
+  </div></section>
+
+  <section id="album" class="screen hidden"><div class="wrap">
+    <div class="hdr"><button id="alBack">←</button><h2>Stickers &amp; Shop</h2><div class="chip" id="alCoins"></div></div>
+    <h3>Dice skins</h3><div class="skins" id="skins"></div>
+    <h3 id="stkTitle">Stickers</h3><div class="sgrid" id="stickers"></div>
+    <p class="note">Win stickers from chests (every 5th level), rank-ups and the 7th day of your daily gift streak.</p>
+    <button class="ghost" id="reset">Reset all progress</button>
+  </div></section>
+
+  <section id="play" class="screen hidden">
+    <div id="hud">
+      <button id="pause" aria-label="Pause">❚❚</button>
+      <div class="hmid"><div id="hudTitle"></div><div class="meter" id="meter"></div><div class="tbar hidden" id="tbar"><i></i></div></div>
+      <div class="hr"><div id="hudScore">0</div><div id="hudLeft"></div></div>
+    </div>
+    <div id="stage"><canvas id="cv"></canvas><div id="say"></div></div>
+    <div id="ctl"></div>
+  </section>
+</div>
+<div id="modal" class="hidden"></div>
+<script>
+/*JS*/
+</script>
+</body>
+</html>
