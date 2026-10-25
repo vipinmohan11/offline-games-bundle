@@ -42,7 +42,7 @@ const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL: ' + m); } };
       if (id === 'drop' || id === 'duel') await page.screenshot({ path: path.join(OUT, v.name + '-levels-' + id + '.png') });
       await page.click('#goCur');
       await page.waitForSelector('#cv');
-      if (await page.$('#intro')) await page.click('#intro');   // skip the goal intro
+      if (await page.$('#intro')) await page.click('#inGo');   // skip the goal intro
       await page.waitForTimeout(400);
       // layout sanity: canvas fills the stage and nothing overflows
       const geo = await page.evaluate(() => {

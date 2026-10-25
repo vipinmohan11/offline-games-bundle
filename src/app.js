@@ -200,11 +200,18 @@
     var panels = (G.intro || []).map(function (p) { return '<div class="ip"><b>' + p[0] + '</b><small>' + p[1] + '</small></div>'; }).join('<span class="ia">▶</span>');
     var secs = long ? 4 : 3;
     modal('<div class="intro" id="intro"><h2>' + G.icon + ' ' + G.name + '</h2><div class="ipanels">' + panels + '</div><p class="goalp">' + goalLine() + '</p>' +
-      (long ? '<p class="sub"><i>' + G.howDe + '</i></p>' : '') + '<div class="skipbar"><i style="animation-duration:' + secs + 's"></i></div><div class="taphint">Tap to start</div></div>');
+      (long ? '<p class="sub"><i>' + G.howDe + '</i></p>' : '') + '<div class="skipbar"><i id="skipI" style="animation-duration:' + secs + 's"></i></div>' +
+      '<div class="btns"><button id="inHold">⏸ Hold</button><button class="pri" id="inGo">▶ Start</button></div></div>');
     clearTimeout(introT);
-    var go = function () { if ($('#intro')) { closeModal(); paused = false; last = performance.now(); } };
+    var go = function () { clearTimeout(introT); if ($('#intro')) { closeModal(); paused = false; last = performance.now(); } };
     introT = setTimeout(go, secs * 1000);
-    $('#intro').addEventListener('pointerdown', function () { clearTimeout(introT); go(); });
+    $('#inGo').addEventListener('click', go);
+    $('#inHold').addEventListener('click', function () {           // keep the intro open as long as you like
+      clearTimeout(introT);
+      $('#skipI').style.animationPlayState = 'paused';
+      document.querySelectorAll('#intro .ip').forEach(function (e) { e.style.animationPlayState = 'paused'; });
+      this.disabled = true; this.textContent = '⏸ Held';
+    });
   }
 
   function buildMeter() {
