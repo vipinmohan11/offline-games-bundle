@@ -209,3 +209,9 @@ button:active{transform:scale(.95) translateY(2px)}
 @keyframes skipb{to{width:100%}}
 .taphint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:700}
 body.reduce .ip{animation:none}
+/* intro panels: three equal columns, text never spills out */
+.ipanels{gap:2px}
+.ip{flex:1 1 0;min-width:0;overflow:hidden;padding:10px 4px}
+.ip b{font-size:clamp(15px,4.8vw,26px);white-space:normal;overflow-wrap:anywhere;line-height:1.15;max-width:100%}
+.ip small{font-size:clamp(11px,3vw,13px)}
+.ia{flex:none;width:14px;text-align:center;font-size:10px}
