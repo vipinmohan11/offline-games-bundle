@@ -235,6 +235,7 @@
       if (!r.sweep) return 1;
       return r.margin >= 10 + Math.floor(l / 4) ? 3 : 2;
     },
+    starShort: function (l) { return '⭐ win · ⭐⭐ win 2-0 · ⭐⭐⭐ 2-0 by ' + (10 + Math.floor(l / 4)) + '+ pips'; },
     starHelp: function (l) { return '1 star: win the match. 2 stars: win 2-0. 3 stars: win 2-0 by ' + (10 + Math.floor(l / 4)) + '+ pips in total.'; },
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Duel(env); }

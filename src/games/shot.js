@@ -177,7 +177,6 @@
     rr(c, ox - 4, oy - 4, s * COLS + 8, s * ROWS + 8, 12); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fill();
     boardFill(c, ox, oy, s * COLS, s * ROWS, 8);
     c.fillStyle = 'rgba(255,107,107,0.18)'; c.fillRect(ox, oy + DANGER * s, s * COLS, s * (ROWS - DANGER));
-    c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,107,107,0.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(ox, oy + DANGER * s); c.lineTo(ox + s * COLS, oy + DANGER * s); c.stroke(); c.setLineDash([]);
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) if (this.g[r][cc]) drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc]);
     for (i = 0; i < this.falling.length; i++) drawDie(c, this.falling[i].x - s / 2, this.falling[i].y - s / 2, s, this.falling[i].v, { alpha: 0.8 });
     if (this.aim != null && !this.proj) {
@@ -196,12 +195,10 @@
     }
     text(c, 'NEXT', this.cx - s * 2.6, this.cy - s * 0.1, s * 0.3, '#aab');
     drawDie(c, this.cx - s * 2.95, this.cy + s * 0.05, s * 0.7, this.next);
-    // next-row countdown bar above the wall
+    // next-row countdown, beside the cannon
     var fr = clamp(this.rowT / this.rowEvery, 0, 1);
-    c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS, 5);
-    c.fillStyle = fr < 0.25 ? '#ff6b6b' : '#ffa94d'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS * fr, 5);
-    text(c, '⬇ next row ' + Math.ceil(this.rowT) + 's', ox + s * COLS - 4, oy + s * ROWS + 16, Math.min(s * 0.3, 13), fr < 0.25 ? '#ff8787' : '#99a', 'right', '700');
-    text(c, 'Same number or sum 7 pops', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
+    text(c, '⬇ new row', this.cx + s * 2.6, this.cy - s * 0.1, Math.min(s * 0.28, 13), '#99a');
+    text(c, Math.ceil(this.rowT) + 's', this.cx + s * 2.6, this.cy + s * 0.3, Math.min(s * 0.5, 22), fr < 0.25 ? '#ff8787' : '#ffa94d', 'center', '800');
   };
   Shot.prototype.angleTo = function (x, y) {
     var a = Math.atan2(-(y - this.cy), x - this.cx);

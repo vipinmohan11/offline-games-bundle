@@ -94,7 +94,6 @@
   Tower.prototype.draw = function (c) {
     var bh = this.bh, cam = this.camera(), W = this.W, i;
     // sky stripes for a sense of height
-    for (i = 0; i < 8; i++) { c.fillStyle = 'rgba(255,255,255,' + (0.02 + (i % 2) * 0.02) + ')'; c.fillRect(0, ((i * 120 + cam * 0.4) % (this.H + 120)) - 120, W, 60); }
     c.save(); c.translate(0, cam);
     rr(c, 0, this.baseY, W, 40, 6); c.fillStyle = 'rgba(0,0,0,0.35)'; c.fill();
     var self = this;
@@ -113,12 +112,10 @@
       var y = this.baseY - (this.blocks.length + 1) * bh - bh * 0.4;
       row({ x: this.mx, w: this.mw, v: [6, 1, 5, 2, 4, 3] }, y, 1);
       var top = this.top();
-      c.setLineDash([5, 5]); c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 2;
       // precision ring: the zone where a drop counts as perfect (it narrows with level)
       var tol = Math.max(3, this.speed() * this.win), ty = this.baseY - this.blocks.length * bh, near = Math.abs(this.mx - top.x) <= tol;
       c.fillStyle = near ? 'rgba(140,233,154,0.95)' : 'rgba(255,212,59,0.85)';
       rr(c, top.x - tol, ty - 5, tol * 2, 5, 2); c.fill(); rr(c, top.x + top.w - tol, ty - 5, tol * 2, 5, 2); c.fill();
-      c.beginPath(); c.moveTo(top.x, y + bh); c.lineTo(top.x, this.baseY - this.blocks.length * bh); c.moveTo(top.x + top.w, y + bh); c.lineTo(top.x + top.w, this.baseY - this.blocks.length * bh); c.stroke(); c.setLineDash([]);
     }
     c.restore();
     text(c, 'Height ' + this.n, 14, 22, 16, '#cde', 'left');

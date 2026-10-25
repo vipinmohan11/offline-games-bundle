@@ -125,9 +125,6 @@
     var W = this.W, H = this.H, R = this.R(), nb = R.bins.length, i;
     rr(c, this.lx, 4, this.laneW, this.binTop - 4, 14); c.fillStyle = 'rgba(0,0,0,0.28)'; c.fill();
     c.save(); c.beginPath(); c.rect(this.lx, 4, this.laneW, this.binTop - 4); c.clip();
-    c.fillStyle = 'rgba(255,255,255,0.05)';
-    var off = (this.env.t * 60) % 40;
-    for (i = -1; i < this.binTop / 40 + 1; i++) c.fillRect(this.cx - 3, i * 40 + off, 6, 20);
     var travel = this.binTop - this.ds * 0.9;
     for (i = this.items.length - 1; i >= 0; i--) {
       var it = this.items[i], y = it.y * travel;
@@ -144,7 +141,6 @@
     for (i = 0; i < Math.max(3, this.lives); i++) text(c, i < this.lives ? '❤️' : '🖤', this.lx + 18 + i * 26, 26, 20);
     var mult = 1 + Math.min(3, Math.floor(this.streak / 5));
     text(c, 'Streak ' + this.streak + (mult > 1 ? '  x' + mult : ''), this.lx + this.laneW - 10, 26, 16, mult > 1 ? '#ffd43b' : '#cde', 'right');
-    text(c, R.tip, this.cx, 54, 15, '#cde', 'center', '600');
     if (this.flash) { c.fillStyle = this.flash.ok ? 'rgba(105,219,124,0.15)' : 'rgba(255,107,107,0.28)'; c.fillRect(0, 0, W, H); }
     if (this.freeze > 0) { c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(this.lx, 4, this.laneW, this.binTop - 4); text(c, 'New rule!', this.cx, this.binTop * 0.38, 32, '#ffd43b'); text(c, R.tip, this.cx, this.binTop * 0.38 + 40, 22, '#fff'); }
   };

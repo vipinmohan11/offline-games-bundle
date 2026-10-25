@@ -206,8 +206,6 @@
   Drop.prototype.draw = function (c) {
     var s = this.cell, ox = this.ox, oy = this.oy, i, r, cc;
     boardBg(c, ox, oy, s * COLS, s * ROWS);
-    c.strokeStyle = 'rgba(255,255,255,0.05)'; c.lineWidth = 1;
-    for (i = 1; i < COLS; i++) { c.beginPath(); c.moveTo(ox + i * s, oy); c.lineTo(ox + i * s, oy + ROWS * s); c.stroke(); }
     var clr = {};
     if (this.clr) this.clr.cells.forEach(function (p) { clr[p[0] * 10 + p[1]] = 1; });
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) if (this.g[r][cc]) {
@@ -215,8 +213,8 @@
       drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc], { alpha: f ? (blink ? 0.4 : 1) : 1, scale: f ? 1.1 : 1, stroke: f ? '#fff' : null });
     }
     var dl = oy + (ROWS - 8) * s;    // danger line: the stack is one piece away from trouble (3 rows from the top)
-    c.save(); c.setLineDash([6, 6]); c.strokeStyle = this.hot ? 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')' : 'rgba(255,255,255,0.14)'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
+    if (this.hot) { c.save(); c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')'; c.lineWidth = 2;      // danger line only appears when the stack is high
+      c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore(); }
     var cur = this.cur;
     if (cur && this.state === 'fall') {
       for (i = 0; i < cur.cells.length; i++) drawDie(c, ox + (cur.x + cur.cells[i][0]) * s, oy + (cur.y + cur.cells[i][1]) * s, s, cur.cells[i][2], { stroke: '#fff' });
@@ -226,7 +224,9 @@
       for (i = 0; i < h.cells.length; i++) drawDie(c, ox + (h.x + h.cells[i][0]) * s, oy + (h.y + h.cells[i][1]) * s, s, h.cells[i][2], { alpha: 0.5 + 0.3 * Math.sin(this.env.t * 8), stroke: '#ffd43b' });
     }
     text(c, 'NEXT', ox + 4, oy - this.strip * 0.5, s * 0.34, '#aab', 'left');
-    for (i = 0; i < this.next.length; i++) drawDie(c, ox + s * 1.5 + this.next[i][0] * s * 0.7, oy - this.strip + this.next[i][1] * s * 0.7 + s * 0.1, s * 0.7, this.next[i][2]);
+    var nh = 1; for (i = 0; i < this.next.length; i++) nh = Math.max(nh, this.next[i][1] + 1);
+    var ns = Math.min(s * 0.7, (this.strip - 6) / nh);                      // the preview always fits inside the strip above the board
+    for (i = 0; i < this.next.length; i++) drawDie(c, ox + s * 1.5 + this.next[i][0] * ns, oy - this.strip + 3 + this.next[i][1] * ns, ns, this.next[i][2]);
   };
   Drop.prototype.pd = function (x, y) { this.sx = this.lx = x; this.sy = y; this.acc = 0; this.moved = false; this.dropped = false; this.st = this.env.t; };
   Drop.prototype.pm = function (x, y) {

@@ -228,6 +228,7 @@
     POWERUPS.forEach(function (p) {
       if (p.id === 'time' && run.timeLeft == null) return;
       var n = save.inv[p.id] || 0, used = run.pu[p.id];
+      if (!n && !used) return;                                  // nothing owned: no row, no clutter
       h += '<button class="pwb' + (used ? ' used' : n ? '' : ' none0') + '" data-pu="' + p.id + '">' + p.icon + ' ' + p.short + '<b>' + (used ? '✓' : n) + '</b></button>';
     });
     el.innerHTML = h; el.classList.toggle('none', !h);
@@ -274,7 +275,7 @@
   function buildMeter() {
     var m = $('#meter'), tb = $('#tbar');
     tb.classList.toggle('hidden', run.timeLeft == null);
-    if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:12px;color:#9aa3c7;font-weight:700;padding-top:1px;white-space:normal;line-height:1.1;margin-top:-4px">' + G.starHelp(run.level) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
+    if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:11px;color:#9aa3c7;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (G.starShort ? G.starShort(run.level) : G.starHelp(run.level)) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
     m.style.background = ''; m.style.height = '';
     var max = run.thr[2] * 1.12, h = '<i id="meterFill"></i>';
     run.thr.forEach(function (t, k) { h += '<u data-k="' + k + '" style="left:' + (100 * t / max) + '%">' + (run.timed ? ['🥉', '🥈', '🥇'][k] : '⭐') + '</u>'; });

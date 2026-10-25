@@ -875,8 +875,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Drop.prototype.draw = function (c) {
     var s = this.cell, ox = this.ox, oy = this.oy, i, r, cc;
     boardBg(c, ox, oy, s * COLS, s * ROWS);
-    c.strokeStyle = 'rgba(255,255,255,0.05)'; c.lineWidth = 1;
-    for (i = 1; i < COLS; i++) { c.beginPath(); c.moveTo(ox + i * s, oy); c.lineTo(ox + i * s, oy + ROWS * s); c.stroke(); }
     var clr = {};
     if (this.clr) this.clr.cells.forEach(function (p) { clr[p[0] * 10 + p[1]] = 1; });
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) if (this.g[r][cc]) {
@@ -884,8 +882,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc], { alpha: f ? (blink ? 0.4 : 1) : 1, scale: f ? 1.1 : 1, stroke: f ? '#fff' : null });
     }
     var dl = oy + (ROWS - 8) * s;    // danger line: the stack is one piece away from trouble (3 rows from the top)
-    c.save(); c.setLineDash([6, 6]); c.strokeStyle = this.hot ? 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')' : 'rgba(255,255,255,0.14)'; c.lineWidth = 2;
-    c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
+    if (this.hot) { c.save(); c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,107,107,' + (0.6 + 0.4 * Math.sin(this.env.t * 8)) + ')'; c.lineWidth = 2;      // danger line only appears when the stack is high
+      c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore(); }
     var cur = this.cur;
     if (cur && this.state === 'fall') {
       for (i = 0; i < cur.cells.length; i++) drawDie(c, ox + (cur.x + cur.cells[i][0]) * s, oy + (cur.y + cur.cells[i][1]) * s, s, cur.cells[i][2], { stroke: '#fff' });
@@ -895,7 +893,9 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       for (i = 0; i < h.cells.length; i++) drawDie(c, ox + (h.x + h.cells[i][0]) * s, oy + (h.y + h.cells[i][1]) * s, s, h.cells[i][2], { alpha: 0.5 + 0.3 * Math.sin(this.env.t * 8), stroke: '#ffd43b' });
     }
     text(c, 'NEXT', ox + 4, oy - this.strip * 0.5, s * 0.34, '#aab', 'left');
-    for (i = 0; i < this.next.length; i++) drawDie(c, ox + s * 1.5 + this.next[i][0] * s * 0.7, oy - this.strip + this.next[i][1] * s * 0.7 + s * 0.1, s * 0.7, this.next[i][2]);
+    var nh = 1; for (i = 0; i < this.next.length; i++) nh = Math.max(nh, this.next[i][1] + 1);
+    var ns = Math.min(s * 0.7, (this.strip - 6) / nh);                      // the preview always fits inside the strip above the board
+    for (i = 0; i < this.next.length; i++) drawDie(c, ox + s * 1.5 + this.next[i][0] * ns, oy - this.strip + 3 + this.next[i][1] * ns, ns, this.next[i][2]);
   };
   Drop.prototype.pd = function (x, y) { this.sx = this.lx = x; this.sy = y; this.acc = 0; this.moved = false; this.dropped = false; this.st = this.env.t; };
   Drop.prototype.pm = function (x, y) {
@@ -1823,7 +1823,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     rr(c, ox - 4, oy - 4, s * COLS + 8, s * ROWS + 8, 12); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fill();
     boardFill(c, ox, oy, s * COLS, s * ROWS, 8);
     c.fillStyle = 'rgba(255,107,107,0.18)'; c.fillRect(ox, oy + DANGER * s, s * COLS, s * (ROWS - DANGER));
-    c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,107,107,0.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(ox, oy + DANGER * s); c.lineTo(ox + s * COLS, oy + DANGER * s); c.stroke(); c.setLineDash([]);
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) if (this.g[r][cc]) drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc]);
     for (i = 0; i < this.falling.length; i++) drawDie(c, this.falling[i].x - s / 2, this.falling[i].y - s / 2, s, this.falling[i].v, { alpha: 0.8 });
     if (this.aim != null && !this.proj) {
@@ -1842,12 +1841,10 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     }
     text(c, 'NEXT', this.cx - s * 2.6, this.cy - s * 0.1, s * 0.3, '#aab');
     drawDie(c, this.cx - s * 2.95, this.cy + s * 0.05, s * 0.7, this.next);
-    // next-row countdown bar above the wall
+    // next-row countdown, beside the cannon
     var fr = clamp(this.rowT / this.rowEvery, 0, 1);
-    c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS, 5);
-    c.fillStyle = fr < 0.25 ? '#ff6b6b' : '#ffa94d'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS * fr, 5);
-    text(c, '⬇ next row ' + Math.ceil(this.rowT) + 's', ox + s * COLS - 4, oy + s * ROWS + 16, Math.min(s * 0.3, 13), fr < 0.25 ? '#ff8787' : '#99a', 'right', '700');
-    text(c, 'Same number or sum 7 pops', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
+    text(c, '⬇ new row', this.cx + s * 2.6, this.cy - s * 0.1, Math.min(s * 0.28, 13), '#99a');
+    text(c, Math.ceil(this.rowT) + 's', this.cx + s * 2.6, this.cy + s * 0.3, Math.min(s * 0.5, 22), fr < 0.25 ? '#ff8787' : '#ffa94d', 'center', '800');
   };
   Shot.prototype.angleTo = function (x, y) {
     var a = Math.atan2(-(y - this.cy), x - this.cx);
@@ -1999,9 +1996,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var W = this.W, H = this.H, R = this.R(), nb = R.bins.length, i;
     rr(c, this.lx, 4, this.laneW, this.binTop - 4, 14); c.fillStyle = 'rgba(0,0,0,0.28)'; c.fill();
     c.save(); c.beginPath(); c.rect(this.lx, 4, this.laneW, this.binTop - 4); c.clip();
-    c.fillStyle = 'rgba(255,255,255,0.05)';
-    var off = (this.env.t * 60) % 40;
-    for (i = -1; i < this.binTop / 40 + 1; i++) c.fillRect(this.cx - 3, i * 40 + off, 6, 20);
     var travel = this.binTop - this.ds * 0.9;
     for (i = this.items.length - 1; i >= 0; i--) {
       var it = this.items[i], y = it.y * travel;
@@ -2018,7 +2012,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     for (i = 0; i < Math.max(3, this.lives); i++) text(c, i < this.lives ? '❤️' : '🖤', this.lx + 18 + i * 26, 26, 20);
     var mult = 1 + Math.min(3, Math.floor(this.streak / 5));
     text(c, 'Streak ' + this.streak + (mult > 1 ? '  x' + mult : ''), this.lx + this.laneW - 10, 26, 16, mult > 1 ? '#ffd43b' : '#cde', 'right');
-    text(c, R.tip, this.cx, 54, 15, '#cde', 'center', '600');
     if (this.flash) { c.fillStyle = this.flash.ok ? 'rgba(105,219,124,0.15)' : 'rgba(255,107,107,0.28)'; c.fillRect(0, 0, W, H); }
     if (this.freeze > 0) { c.fillStyle = 'rgba(0,0,0,0.55)'; c.fillRect(this.lx, 4, this.laneW, this.binTop - 4); text(c, 'New rule!', this.cx, this.binTop * 0.38, 32, '#ffd43b'); text(c, R.tip, this.cx, this.binTop * 0.38 + 40, 22, '#fff'); }
   };
@@ -2138,7 +2131,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Tower.prototype.draw = function (c) {
     var bh = this.bh, cam = this.camera(), W = this.W, i;
     // sky stripes for a sense of height
-    for (i = 0; i < 8; i++) { c.fillStyle = 'rgba(255,255,255,' + (0.02 + (i % 2) * 0.02) + ')'; c.fillRect(0, ((i * 120 + cam * 0.4) % (this.H + 120)) - 120, W, 60); }
     c.save(); c.translate(0, cam);
     rr(c, 0, this.baseY, W, 40, 6); c.fillStyle = 'rgba(0,0,0,0.35)'; c.fill();
     var self = this;
@@ -2157,12 +2149,10 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       var y = this.baseY - (this.blocks.length + 1) * bh - bh * 0.4;
       row({ x: this.mx, w: this.mw, v: [6, 1, 5, 2, 4, 3] }, y, 1);
       var top = this.top();
-      c.setLineDash([5, 5]); c.strokeStyle = 'rgba(255,255,255,0.25)'; c.lineWidth = 2;
       // precision ring: the zone where a drop counts as perfect (it narrows with level)
       var tol = Math.max(3, this.speed() * this.win), ty = this.baseY - this.blocks.length * bh, near = Math.abs(this.mx - top.x) <= tol;
       c.fillStyle = near ? 'rgba(140,233,154,0.95)' : 'rgba(255,212,59,0.85)';
       rr(c, top.x - tol, ty - 5, tol * 2, 5, 2); c.fill(); rr(c, top.x + top.w - tol, ty - 5, tol * 2, 5, 2); c.fill();
-      c.beginPath(); c.moveTo(top.x, y + bh); c.lineTo(top.x, this.baseY - this.blocks.length * bh); c.moveTo(top.x + top.w, y + bh); c.lineTo(top.x + top.w, this.baseY - this.blocks.length * bh); c.stroke(); c.setLineDash([]);
     }
     c.restore();
     text(c, 'Height ' + this.n, 14, 22, 16, '#cde', 'left');
@@ -2421,6 +2411,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       if (!r.sweep) return 1;
       return r.margin >= 10 + Math.floor(l / 4) ? 3 : 2;
     },
+    starShort: function (l) { return '⭐ win · ⭐⭐ win 2-0 · ⭐⭐⭐ 2-0 by ' + (10 + Math.floor(l / 4)) + '+ pips'; },
     starHelp: function (l) { return '1 star: win the match. 2 stars: win 2-0. 3 stars: win 2-0 by ' + (10 + Math.floor(l / 4)) + '+ pips in total.'; },
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Duel(env); }
@@ -2659,6 +2650,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     POWERUPS.forEach(function (p) {
       if (p.id === 'time' && run.timeLeft == null) return;
       var n = save.inv[p.id] || 0, used = run.pu[p.id];
+      if (!n && !used) return;                                  // nothing owned: no row, no clutter
       h += '<button class="pwb' + (used ? ' used' : n ? '' : ' none0') + '" data-pu="' + p.id + '">' + p.icon + ' ' + p.short + '<b>' + (used ? '✓' : n) + '</b></button>';
     });
     el.innerHTML = h; el.classList.toggle('none', !h);
@@ -2705,7 +2697,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   function buildMeter() {
     var m = $('#meter'), tb = $('#tbar');
     tb.classList.toggle('hidden', run.timeLeft == null);
-    if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:12px;color:#9aa3c7;font-weight:700;padding-top:1px;white-space:normal;line-height:1.1;margin-top:-4px">' + G.starHelp(run.level) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
+    if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:11px;color:#9aa3c7;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (G.starShort ? G.starShort(run.level) : G.starHelp(run.level)) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
     m.style.background = ''; m.style.height = '';
     var max = run.thr[2] * 1.12, h = '<i id="meterFill"></i>';
     run.thr.forEach(function (t, k) { h += '<u data-k="' + k + '" style="left:' + (100 * t / max) + '%">' + (run.timed ? ['🥉', '🥈', '🥇'][k] : '⭐') + '</u>'; });
