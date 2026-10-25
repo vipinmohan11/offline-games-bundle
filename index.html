@@ -1252,7 +1252,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     text(c, 'NEXT', ox + s * 0.1, oy - s * 1.3, s * 0.28, '#cde', 'left');
     drawDie(c, ox + s * 0.1, oy - s * 1.1, s * 0.6, this.next);
     text(c, this.W_.bloom + ' ' + this.flowers, ox + COLS * s - 4, oy - s * 1.3, s * 0.4, '#ffd43b', 'right');
-    text(c, '1 → 2 → 3 → 4 → 5 → ' + this.W_.bloom + '   (3 same merge)', ox + COLS * s - 4, oy - s * 0.62, Math.min(s * 0.27, 14), '#cde', 'right');
+    text(c, '1→2→3→4→5→' + this.W_.bloom, ox + s * 2.3, oy - s * 1.3, Math.min(s * 0.26, 14), '#cde', 'center', '700');
   };
   Garden.prototype.colAt = function (x) { return clamp(Math.floor((x - this.ox) / this.cell), 0, COLS - 1); };
   Garden.prototype.pd = function (x) { this.col = this.colAt(x); this.down = true; };
