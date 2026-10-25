@@ -9,7 +9,7 @@
   var RANKS = ['Rookie Roller', 'Dice Cadet', 'Pip Pilot', 'Lucky Roller', 'Dice Knight', 'Dice Wizard', 'Dice Master', 'Dice Legend'];
   var KEY = 'diceArcade.v1';
   var VERSION = '2.1', BUILD = '__BUILD__';
-  var DEF_SET = { vol: 0.8, vibe: true, motion: true, hints: true, text: 1, theme: 'night', big: false, lefty: false, name: '' };
+  var DEF_SET = { vol: 0.8, vibe: true, motion: true, hints: true, text: 1, theme: 'night', look: 'dark', big: false, lefty: false, name: '' };
   var $ = function (s) { return document.querySelector(s); };
   var save, run = null, G = null, curGame = null, paused = false, last = 0, raf = 0, overT = 0;
   var cv, ctx, dpr = 1, fx = [], parts = [], sayT = 0;
@@ -528,9 +528,11 @@
     var b = document.body, s = save.set;
     b.classList.remove('t-ocean', 't-candy', 't-forest');
     if (s.theme !== 'night') b.classList.add('t-' + s.theme);
+    var lk = s.look === 'auto' ? (window.matchMedia && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : (s.look === 'light' ? 'light' : 'dark');
+    b.classList.toggle('lk-light', lk === 'light'); b.classList.toggle('lk-dark', lk === 'dark');
     b.classList.toggle('reduce', !s.motion); b.classList.toggle('lefty', !!s.lefty); b.classList.toggle('bigbtn', !!s.big);
     $('#app').style.zoom = s.text === 1 ? '' : s.text;
-    var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = getComputedStyle(b).getPropertyValue('--bg') || '#12162b';
+    var m = document.querySelector('meta[name=theme-color]'); if (m) m.content = lk === 'light' ? '#f5f5f7' : (getComputedStyle(b).getPropertyValue('--bg') || '#12162b');
   }
   function seg(key, opts) {
     return '<div class="seg">' + opts.map(function (o) { return '<button data-set="' + key + '" data-val="' + o[0] + '" class="' + (String(save.set[key]) === String(o[0]) ? 'on' : '') + '">' + o[1] + '</button>'; }).join('') + '</div>';
@@ -549,7 +551,8 @@
       '<div class="srow"><div class="lbl">Big buttons<small>Larger control buttons for small hands</small></div>' + tog('big', s.big) + '</div>' +
       '<div class="srow"><div class="lbl">Left-handed layout<small>Mirrors the button order</small></div>' + tog('lefty', s.lefty) + '</div></div>';
     h += '<div class="set"><h3>🎨 Look</h3>' +
-      '<div class="srow"><div class="lbl">Theme</div>' + seg('theme', [['night', '🌙 Night'], ['ocean', '🌊 Ocean'], ['candy', '🍬 Candy'], ['forest', '🌲 Forest']]) + '</div>' +
+      '<div class="srow"><div class="lbl">Look<small>Dark is the default. Auto follows your phone.</small></div>' + seg('look', [['dark', '🌙 Dark'], ['light', '☀️ Light'], ['auto', 'Auto']]) + '</div>' +
+      '<div class="srow"><div class="lbl">Colours (dark look)</div>' + seg('theme', [['night', '🌙 Night'], ['ocean', '🌊 Ocean'], ['candy', '🍬 Candy'], ['forest', '🌲 Forest']]) + '</div>' +
       '<div class="srow"><div class="lbl">Text and menu size</div>' + seg('text', [[0.9, 'S'], [1, 'M'], [1.15, 'L'], [1.3, 'XL']]) + '</div>' +
       '<div class="note">Dice skins are in 🎨 Stickers &amp; Shop.</div></div>';
     h += '<div class="set"><h3>💾 Save data</h3><div class="note">Everything is stored only on this device. Back it up before clearing browser data or changing phone.</div>' +

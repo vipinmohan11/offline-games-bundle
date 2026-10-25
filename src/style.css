@@ -1,4 +1,4 @@
-:root{--bg:#12162b;--card:#1d2342;--card2:#262d54;--text:#f1f3ff;--muted:#9aa3c7;--gold:#ffd43b;--good:#69db7c;--bad:#ff6b6b;--r:18px}
+:root{--blue:#2997ff;--line:rgba(255,255,255,.14);--bg:#12162b;--card:#1d2342;--card2:#262d54;--text:#f1f3ff;--muted:#9aa3c7;--gold:#ffd43b;--good:#69db7c;--bad:#ff6b6b;--r:18px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none}
 #app{position:fixed;inset:0}
@@ -173,12 +173,13 @@ body.reduce .ip{animation:none}
 .losep{font-size:13px;color:#ffb3c1;font-weight:700;margin:0 0 8px}
 
 /* ======== v2.1 Apple-website look for the pages around the games ======== */
-#home,#levels,#album,#settings{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #settings{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f}
+#home,#levels,#album,#settings{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 #home button,#levels button,#album button,#settings button{border-radius:980px;font-weight:600;letter-spacing:-.01em;box-shadow:none}
 #home button.pri,#levels button.pri,#album button.pri,#settings button.pri{background:var(--blue);color:#fff}
 #home button.pri.poor,#album button.pri.poor{background:var(--card2);color:var(--muted)}
 .chip{background:var(--card);padding:6px 12px;border-radius:980px;font-weight:600;white-space:nowrap;border:1px solid var(--line);font-size:14px}
-.bar,.rbar{background:#e8e8ed}
+.bar,.rbar{background:var(--card2)}
 .rbar i,.bar>i{background:var(--blue)}
 .hub{position:absolute;inset:0;display:flex;flex-direction:column;gap:10px;padding:0 max(14px,env(safe-area-inset-right)) max(10px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));max-width:900px;margin:0 auto}
 .anav{display:flex;align-items:center;justify-content:space-between;min-height:48px;padding-top:env(safe-area-inset-top);border-bottom:1px solid var(--line);margin:0 -14px;padding-left:14px;padding-right:14px}
@@ -193,8 +194,8 @@ body.reduce .ip{animation:none}
 .hero .rbar{width:min(220px,60%);height:4px;margin:0 auto;border-radius:4px;overflow:hidden}
 .cards{flex:1;min-height:0;display:grid;gap:6px;grid-template-columns:1fr;grid-auto-rows:minmax(0,60px);align-content:center}
 .gcard{display:grid!important;grid-template-columns:44px 1fr auto 12px;gap:12px;align-items:center;text-align:left;padding:8px 14px 8px 10px!important;height:100%;min-height:0!important;border-radius:16px!important;background:var(--card)!important;color:var(--text)!important;border:0!important;box-shadow:none!important;text-shadow:none!important;font-weight:400!important}
-.gcard:active{transform:scale(.985);background:#fafafa!important}
-.gcard .ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:24px;background:#eef1f8;background:color-mix(in srgb,var(--c) 16%,#fff)}
+.gcard:active{transform:scale(.985);filter:brightness(.96)}
+.gcard .ic{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--card2);background:color-mix(in srgb,var(--c) 18%,var(--card))}
 .gcard .tx{min-width:0;display:flex;flex-direction:column}
 .gcard .nm{font-size:16px;font-weight:600;letter-spacing:-.015em;line-height:1.2}
 .gcard .tx small{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.3}
@@ -213,17 +214,17 @@ body.reduce .ip{animation:none}
 #levels .lv,#album .skin,#album .pu,#album .av,#album .tl,#album .stk,#settings .set{background:var(--card);border:1px solid var(--line);box-shadow:none}
 #levels .lv{border-radius:12px}
 #levels .lv.cur{outline:2px solid var(--blue);outline-offset:1px}
-#levels .tabs button{background:var(--card2)}#levels .tabs button.on{background:var(--text);color:#fff}
+#levels .tabs button{background:var(--card2)}#levels .tabs button.on{background:var(--text);color:var(--bg)}
 #levels .how,#levels .note,#album .note{color:var(--muted)}
 #levels .lvfoot{background:var(--bg)}
 #levels .chal{background:var(--card);border:1px solid var(--line)}
 #levels .pill,#album .pill{background:var(--card2);color:var(--text)}
-#settings .set input[type=text],#settings .set textarea{background:#fff;color:var(--text);border:1px solid var(--line)}
+#settings .set input[type=text],#settings .set textarea{background:var(--bg);color:var(--text);border:1px solid var(--line)}
 #settings .srow{border-top-color:var(--line)}
 #settings .seg button{background:var(--card2)}#settings .seg button.on{background:var(--blue);color:#fff}
 #settings .tg.on{background:#34c759;color:#fff}
 #album .skin.sel,#album .av.sel,#album .tl.sel{outline:2px solid var(--blue)}
-#album .stk.no{background:#ececf0}
+#album .stk.no{background:var(--card2)}
 .pus{display:grid;gap:8px}
 .pu{display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:center;padding:10px 12px;border-radius:16px}
 .pu .pi{font-size:24px;text-align:center;font-weight:700}.pu .pt{display:flex;flex-direction:column}.pu .pt small{color:var(--muted);font-size:12px;font-weight:400}
