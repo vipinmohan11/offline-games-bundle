@@ -16,7 +16,7 @@
 <body>
 <div id="app">
   <section id="home" class="screen"><div class="hub">
-    <nav class="anav"><span class="alogo">⚄ Dice Arcade</span><span class="aright"><button id="profile" class="prof" aria-label="Profile and shop"><span id="pAv">🎲</span><span id="pName"></span></button><span class="chip" id="coins">🪙 0</span></span></nav>
+    <nav class="anav"><span class="alogo">⚄ Dice Arcade</span><span class="aright"><button id="profile" class="prof" aria-label="Profile and shop"><span id="pAv">🎲</span><span id="pName"></span></button><span class="chip hidden" id="kidChip"></span><span class="chip" id="coins">🪙 0</span></span></nav>
     <header class="hero"><h1>Roll. Match. <em>Master.</em></h1><p class="sub" id="rankLine"></p><div class="rbar"><i id="rankBar"></i></div></header>
     <div class="cards" id="cards"></div>
     <div class="dock"><button id="gift" aria-label="Daily gift">🎁<small>Gift</small></button><button id="navAlbum" aria-label="Shop and stickers">🛍<small>Shop</small></button><button id="navSet" aria-label="Settings">⚙<small>Settings</small></button><button id="navSound" aria-label="Sound">🔊<small>Sound</small></button></div>
@@ -41,6 +41,11 @@
   <section id="settings" class="screen hidden"><div class="wrap">
     <div class="hdr"><button id="stBack">←</button><h2>⚙ Settings</h2></div>
     <div id="stBody"></div>
+  </div></section>
+
+  <section id="parent" class="screen hidden"><div class="wrap">
+    <div class="hdr"><button id="parBack">←</button><h2>👪 Parent page</h2></div>
+    <div id="parBody"></div>
   </div></section>
 
   <section id="play" class="screen hidden">

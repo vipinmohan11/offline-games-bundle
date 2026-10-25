@@ -173,10 +173,10 @@ body.reduce .ip{animation:none}
 .losep{font-size:13px;color:#ffb3c1;font-weight:700;margin:0 0 8px}
 
 /* ======== v2.1 Apple-website look for the pages around the games ======== */
-body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #settings{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f}
-#home,#levels,#album,#settings{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-#home button,#levels button,#album button,#settings button{border-radius:980px;font-weight:600;letter-spacing:-.01em;box-shadow:none}
-#home button.pri,#levels button.pri,#album button.pri,#settings button.pri{background:var(--blue);color:#fff}
+body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #settings,body.lk-light #parent{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f}
+#home,#levels,#album,#settings,#parent{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#home button,#levels button,#album button,#settings button,#parent button{border-radius:980px;font-weight:600;letter-spacing:-.01em;box-shadow:none}
+#home button.pri,#levels button.pri,#album button.pri,#settings button.pri,#parent button.pri{background:var(--blue);color:#fff}
 #home button.pri.poor,#album button.pri.poor{background:var(--card2);color:var(--muted)}
 .chip{background:var(--card);padding:6px 12px;border-radius:980px;font-weight:600;white-space:nowrap;border:1px solid var(--line);font-size:14px}
 .bar,.rbar{background:var(--card2)}
@@ -211,7 +211,7 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 @media (min-width:700px){.cards{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,64px);gap:10px}.hero h1{font-size:clamp(34px,5vw,52px)}}
 @media (orientation:landscape) and (max-height:560px){.hero h1{font-size:26px}.hero .sub{display:none}.cards{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,52px);gap:6px}.hero{padding:0}}
 /* level select, shop, settings: same white tiles on light grey */
-#levels .lv,#album .skin,#album .pu,#album .av,#album .tl,#album .stk,#settings .set{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#levels .lv,#album .skin,#album .pu,#album .av,#album .tl,#album .stk,#settings .set,#parent .set{background:var(--card);border:1px solid var(--line);box-shadow:none}
 #levels .lv{border-radius:12px}
 #levels .lv.cur{outline:2px solid var(--blue);outline-offset:1px}
 #levels .tabs button{background:var(--card2)}#levels .tabs button.on{background:var(--text);color:var(--bg)}
@@ -219,10 +219,10 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 #levels .lvfoot{background:var(--bg)}
 #levels .chal{background:var(--card);border:1px solid var(--line)}
 #levels .pill,#album .pill{background:var(--card2);color:var(--text)}
-#settings .set input[type=text],#settings .set textarea{background:var(--bg);color:var(--text);border:1px solid var(--line)}
-#settings .srow{border-top-color:var(--line)}
-#settings .seg button{background:var(--card2)}#settings .seg button.on{background:var(--blue);color:#fff}
-#settings .tg.on{background:#34c759;color:#fff}
+#settings .set input[type=text],#parent .set input[type=text],#settings .set textarea,#parent .set textarea{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+#settings .srow,#parent .srow{border-top-color:var(--line)}
+#settings .seg button,#parent .seg button{background:var(--card2)}#settings .seg button.on{background:var(--blue);color:#fff}
+#settings .tg.on,#parent .tg.on{background:#34c759;color:#fff}
 #album .skin.sel,#album .av.sel,#album .tl.sel{outline:2px solid var(--blue)}
 #album .stk.no{background:var(--card2)}
 .pus{display:grid;gap:8px}
@@ -245,3 +245,10 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 #pName{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:110px}
 .prof{max-width:200px}
 @media (max-width:400px){#pName{max-width:70px}}
+
+.pwin{width:100%;margin:6px 0;background:#0e1226;color:var(--text);border:2px solid var(--card2);border-radius:12px;padding:12px;font:inherit;font-size:18px}
+body.lk-light .pwin{background:#fff;color:#1d1d1f;border-color:#d2d2d7}
+.pbars{display:flex;gap:8px;align-items:flex-end;height:90px}
+.pbar{flex:1;height:100%;position:relative;background:rgba(127,127,127,.15);border-radius:8px;overflow:hidden}
+.pbar i{position:absolute;left:0;right:0;bottom:0;background:#0a84ff;border-radius:8px}
+.pbar span{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:11px;font-weight:700;mix-blend-mode:difference;color:#fff}

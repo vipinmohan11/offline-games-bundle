@@ -13,7 +13,7 @@
     this.shots = Infinity;                       // no shot limit: the 2-minute clock ends the level
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     for (r = 0; r < this.rows0; r++) for (var c = 0; c < COLS; c++) if (env.rnd() < 0.92) this.g[r][c] = 1 + Math.floor(env.rnd() * this.nv);
-    this.rowEvery = T ? 12 : Math.max(12, 22 - 0.25 * Math.min(l, 40));      // seconds between new rows
+    this.rowEvery = T ? 8 : Math.max(9, 10 - 0.03 * Math.min(l, 40));      // seconds between new rows
     this.rowT = this.rowEvery;
     this.miss = 0; this.proj = null; this.aim = null; this.falling = []; this.angle = Math.PI / 2; this.cool = 0; this.botT = 0;
     this.cur = this.pick(); this.next = this.pick();
@@ -215,7 +215,7 @@
     intro: [["🎯 👆", "Drag to aim, let go to fire"], ["⚂ + ⚃ = 7", "Same number, or two that add to 7, pop"], ["⬇ ⬇", "New rows arrive on a timer!"]],
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
     blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
-    par: 38, budget: function (l) { return 44 + Math.floor(l / 2); },       // shots a steady player gets in 2 minutes (sets the goals)
+    par: 38, budget: function (l) { return 12 + Math.floor(l / 6); },       // shots a steady player gets in 2 minutes (sets the goals)
     levelTime: function () { return 120; }, fixedClock: true, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }

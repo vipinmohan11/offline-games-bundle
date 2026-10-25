@@ -185,10 +185,10 @@ body.reduce .ip{animation:none}
 .losep{font-size:13px;color:#ffb3c1;font-weight:700;margin:0 0 8px}
 
 /* ======== v2.1 Apple-website look for the pages around the games ======== */
-body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #settings{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f}
-#home,#levels,#album,#settings{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
-#home button,#levels button,#album button,#settings button{border-radius:980px;font-weight:600;letter-spacing:-.01em;box-shadow:none}
-#home button.pri,#levels button.pri,#album button.pri,#settings button.pri{background:var(--blue);color:#fff}
+body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #settings,body.lk-light #parent{--bg:#f5f5f7;--card:#ffffff;--card2:#e8e8ed;--text:#1d1d1f;--muted:#6e6e73;--blue:#0071e3;--line:#d2d2d7;--gold:#b7791f}
+#home,#levels,#album,#settings,#parent{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Helvetica Neue",Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+#home button,#levels button,#album button,#settings button,#parent button{border-radius:980px;font-weight:600;letter-spacing:-.01em;box-shadow:none}
+#home button.pri,#levels button.pri,#album button.pri,#settings button.pri,#parent button.pri{background:var(--blue);color:#fff}
 #home button.pri.poor,#album button.pri.poor{background:var(--card2);color:var(--muted)}
 .chip{background:var(--card);padding:6px 12px;border-radius:980px;font-weight:600;white-space:nowrap;border:1px solid var(--line);font-size:14px}
 .bar,.rbar{background:var(--card2)}
@@ -223,7 +223,7 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 @media (min-width:700px){.cards{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,64px);gap:10px}.hero h1{font-size:clamp(34px,5vw,52px)}}
 @media (orientation:landscape) and (max-height:560px){.hero h1{font-size:26px}.hero .sub{display:none}.cards{grid-template-columns:1fr 1fr;grid-auto-rows:minmax(0,52px);gap:6px}.hero{padding:0}}
 /* level select, shop, settings: same white tiles on light grey */
-#levels .lv,#album .skin,#album .pu,#album .av,#album .tl,#album .stk,#settings .set{background:var(--card);border:1px solid var(--line);box-shadow:none}
+#levels .lv,#album .skin,#album .pu,#album .av,#album .tl,#album .stk,#settings .set,#parent .set{background:var(--card);border:1px solid var(--line);box-shadow:none}
 #levels .lv{border-radius:12px}
 #levels .lv.cur{outline:2px solid var(--blue);outline-offset:1px}
 #levels .tabs button{background:var(--card2)}#levels .tabs button.on{background:var(--text);color:var(--bg)}
@@ -231,10 +231,10 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 #levels .lvfoot{background:var(--bg)}
 #levels .chal{background:var(--card);border:1px solid var(--line)}
 #levels .pill,#album .pill{background:var(--card2);color:var(--text)}
-#settings .set input[type=text],#settings .set textarea{background:var(--bg);color:var(--text);border:1px solid var(--line)}
-#settings .srow{border-top-color:var(--line)}
-#settings .seg button{background:var(--card2)}#settings .seg button.on{background:var(--blue);color:#fff}
-#settings .tg.on{background:#34c759;color:#fff}
+#settings .set input[type=text],#parent .set input[type=text],#settings .set textarea,#parent .set textarea{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+#settings .srow,#parent .srow{border-top-color:var(--line)}
+#settings .seg button,#parent .seg button{background:var(--card2)}#settings .seg button.on{background:var(--blue);color:#fff}
+#settings .tg.on,#parent .tg.on{background:#34c759;color:#fff}
 #album .skin.sel,#album .av.sel,#album .tl.sel{outline:2px solid var(--blue)}
 #album .stk.no{background:var(--card2)}
 .pus{display:grid;gap:8px}
@@ -258,12 +258,19 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
 .prof{max-width:200px}
 @media (max-width:400px){#pName{max-width:70px}}
 
+.pwin{width:100%;margin:6px 0;background:#0e1226;color:var(--text);border:2px solid var(--card2);border-radius:12px;padding:12px;font:inherit;font-size:18px}
+body.lk-light .pwin{background:#fff;color:#1d1d1f;border-color:#d2d2d7}
+.pbars{display:flex;gap:8px;align-items:flex-end;height:90px}
+.pbar{flex:1;height:100%;position:relative;background:rgba(127,127,127,.15);border-radius:8px;overflow:hidden}
+.pbar i{position:absolute;left:0;right:0;bottom:0;background:#0a84ff;border-radius:8px}
+.pbar span{position:absolute;left:0;right:0;bottom:2px;text-align:center;font-size:11px;font-weight:700;mix-blend-mode:difference;color:#fff}
+
 </style>
 </head>
 <body>
 <div id="app">
   <section id="home" class="screen"><div class="hub">
-    <nav class="anav"><span class="alogo">⚄ Dice Arcade</span><span class="aright"><button id="profile" class="prof" aria-label="Profile and shop"><span id="pAv">🎲</span><span id="pName"></span></button><span class="chip" id="coins">🪙 0</span></span></nav>
+    <nav class="anav"><span class="alogo">⚄ Dice Arcade</span><span class="aright"><button id="profile" class="prof" aria-label="Profile and shop"><span id="pAv">🎲</span><span id="pName"></span></button><span class="chip hidden" id="kidChip"></span><span class="chip" id="coins">🪙 0</span></span></nav>
     <header class="hero"><h1>Roll. Match. <em>Master.</em></h1><p class="sub" id="rankLine"></p><div class="rbar"><i id="rankBar"></i></div></header>
     <div class="cards" id="cards"></div>
     <div class="dock"><button id="gift" aria-label="Daily gift">🎁<small>Gift</small></button><button id="navAlbum" aria-label="Shop and stickers">🛍<small>Shop</small></button><button id="navSet" aria-label="Settings">⚙<small>Settings</small></button><button id="navSound" aria-label="Sound">🔊<small>Sound</small></button></div>
@@ -288,6 +295,11 @@ body.lk-light #home,body.lk-light #levels,body.lk-light #album,body.lk-light #se
   <section id="settings" class="screen hidden"><div class="wrap">
     <div class="hdr"><button id="stBack">←</button><h2>⚙ Settings</h2></div>
     <div id="stBody"></div>
+  </div></section>
+
+  <section id="parent" class="screen hidden"><div class="wrap">
+    <div class="hdr"><button id="parBack">←</button><h2>👪 Parent page</h2></div>
+    <div id="parBody"></div>
   </div></section>
 
   <section id="play" class="screen hidden">
@@ -1659,7 +1671,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.shots = Infinity;                       // no shot limit: the 2-minute clock ends the level
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     for (r = 0; r < this.rows0; r++) for (var c = 0; c < COLS; c++) if (env.rnd() < 0.92) this.g[r][c] = 1 + Math.floor(env.rnd() * this.nv);
-    this.rowEvery = T ? 12 : Math.max(12, 22 - 0.25 * Math.min(l, 40));      // seconds between new rows
+    this.rowEvery = T ? 8 : Math.max(9, 10 - 0.03 * Math.min(l, 40));      // seconds between new rows
     this.rowT = this.rowEvery;
     this.miss = 0; this.proj = null; this.aim = null; this.falling = []; this.angle = Math.PI / 2; this.cool = 0; this.botT = 0;
     this.cur = this.pick(); this.next = this.pick();
@@ -1861,7 +1873,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     intro: [["🎯 👆", "Drag to aim, let go to fire"], ["⚂ + ⚃ = 7", "Same number, or two that add to 7, pop"], ["⬇ ⬇", "New rows arrive on a timer!"]],
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
     blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
-    par: 38, budget: function (l) { return 44 + Math.floor(l / 2); },       // shots a steady player gets in 2 minutes (sets the goals)
+    par: 38, budget: function (l) { return 12 + Math.floor(l / 6); },       // shots a steady player gets in 2 minutes (sets the goals)
     levelTime: function () { return 120; }, fixedClock: true, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }
@@ -2444,7 +2456,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     } catch (e) {}
     var n = Prog.newSave(); fixSet(n); return n;
   }
-  function fixSet(s) { s.set = s.set || {}; for (var k in DEF_SET) if (!(k in s.set)) s.set[k] = DEF_SET[k]; }
+  function fixSet(s) { if (!s.kid || typeof s.kid !== 'object') s.kid = { on: false, pw: '', wk: '', wsec: 0, dy: '', dsec: 0, days: {} }; s.set = s.set || {}; for (var k in DEF_SET) if (!(k in s.set)) s.set[k] = DEF_SET[k]; }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function rankName(r) { return RANKS[Math.min(RANKS.length - 1, Math.floor((r - 1) / 4))]; }
@@ -2477,8 +2489,14 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   }
 
   /* ---------- screens ---------- */
-  var screens = ['home', 'levels', 'album', 'settings', 'play'];
-  function show(id) { screens.forEach(function (s) { $('#' + s).classList.toggle('hidden', s !== id); }); }
+  var screens = ['home', 'levels', 'album', 'settings', 'parent', 'play'];
+  var unlocked = false, kidAcc = 0, KID_DAY = 600, KID_WEEK = 1800;
+  function hashPw(t) { var h = 5381, i; t = 'da1:' + t; for (i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return String(h); }
+  function weekKey() { var d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function kidRoll() { var k = save.kid, t = today(), w = weekKey(); if (k.dy !== t) { k.dy = t; k.dsec = 0; } if (k.wk !== w) { k.wk = w; k.wsec = 0; } }
+  function kidLeft() { if (!save.kid.on) return Infinity; kidRoll(); return Math.max(0, Math.min(KID_DAY - save.kid.dsec, KID_WEEK - save.kid.wsec)); }
+  function mmss(sec) { sec = Math.max(0, Math.ceil(sec)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+  function show(id) { if (id !== 'settings' && id !== 'parent') unlocked = false; if (id !== 'play') { $('#play') && 0; } screens.forEach(function (s) { $('#' + s).classList.toggle('hidden', s !== id); }); }
   function modal(html) { var m = $('#modal'); m.innerHTML = '<div class="dlg">' + html + '</div>'; m.classList.remove('hidden'); }
   function closeModal() { var m = $('#modal'); m.classList.add('hidden'); m.innerHTML = ''; }
 
@@ -2487,6 +2505,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
     $('#pAv').textContent = save.avatar || '🎲';
+    var kc = $('#kidChip'); if (kc) { var kl = kidLeft(); kc.classList.toggle('hidden', kl === Infinity); if (kl !== Infinity) kc.textContent = '⏱ ' + mmss(kl) + ' left'; }
     $('#pName').textContent = (save.set.name || 'Player') + ' · ' + TITLES[save.title || 0].t;
     var rk = Prog.rankOf(save.xp);
     $('#rankLine').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank) + ' · ' + rk.into + ' / ' + rk.need + ' XP';
@@ -2618,6 +2637,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   function startRun(id, level, timed, wantChal) {
     closeModal();
+    if (kidLeft() <= 0) { run = null; cancelAnimationFrame(raf); renderHome(); show('home'); modal('<h2>⏱ Play time is up</h2><p class="sub">You have used your play time for ' + (save.kid.dsec >= KID_DAY ? 'today (10 min a day)' : 'this week (30 min a week)') + '. Come back ' + (save.kid.dsec >= KID_DAY ? 'tomorrow' : 'next Monday') + '!</p><div class="btns"><button class="pri" id="mClose">OK</button></div>'); return; }
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
     run.challenge = false; $('#play').dataset.urg = 0;
@@ -2730,11 +2750,19 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     }
   }
 
+  function kidTick(dt) {
+    kidRoll(); var k = save.kid; k.dsec += dt; k.wsec += dt; kidAcc += dt;
+    if (kidAcc > 5 || kidLeft() <= 0) { kidAcc = 0; k.days[k.dy] = Math.round(k.dsec); var ks = Object.keys(k.days).sort(); while (ks.length > 14) delete k.days[ks.shift()]; persist(); }
+    if (kidLeft() <= 0 && run && !run.over) {
+      paused = true;
+      modal('<h2>⏱ Play time is up</h2><p class="sub">That is all for ' + (k.dsec >= KID_DAY ? 'today' : 'this week') + '. Great playing!</p><div class="btns"><button class="pri" id="kidHome">Home</button></div>');
+    }
+  }
   function loop(now) {
     raf = requestAnimationFrame(loop);
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!run) return;
-    if (!paused && !run.over) { run.step(dt); updateHud(); }
+    if (!paused && !run.over) { run.step(dt); updateHud(); if (save.kid.on) kidTick(dt); }
     else if (run.over && !paused) { overT += dt; if (overT > 0.9 && !run.done) { run.done = true; onOver(); } }
     var W = run.W, H = run.H;
     ctx.clearRect(0, 0, W, H);
@@ -2858,18 +2886,24 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       modal('<h2>🎁 Daily gift!</h2><div class="big">+' + g.coins + ' 🪙</div><div class="sub">Day ' + g.streak + ' of 7. Come back tomorrow for more!</div><div class="gdays">' + days + '</div>' +
         (g.sticker != null ? '<div class="reveal"><div class="em">' + STICKERS[g.sticker] + '</div>New sticker!</div>' : '') + how + '<div class="btns"><button class="pri" id="mClose">Yay!</button></div>');
     });
-    on('#navSet', 'click', function () { renderSettings(); show('settings'); });
+    on('#navSet', 'click', function () { askPw(function () { unlocked = true; renderSettings(); show('settings'); }); });
+    on('#parBack', 'click', function () { renderHome(); show('home'); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && (!$('#settings').classList.contains('hidden') || !$('#parent').classList.contains('hidden'))) { renderHome(); show('home'); } });
+    $('#parBody').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && b.id === 'parSet') { renderSettings(); show('settings'); } });
     on('#stBack', 'click', function () { renderHome(); show('home'); });
     $('#stBody').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.dataset.tog) {
         var k = b.dataset.tog;
+        if (k === 'kid') { if (!save.kid.on && !save.kid.pw) { askNewPw(function () { save.kid.on = true; persist(); renderSettings(); }); return; } save.kid.on = !save.kid.on; persist(); renderSettings(); sfx('pop'); return; }
         if (k === 'sound') save.sound = !save.sound; else save.set[k] = !save.set[k];
         persist(); applySettings(); renderSettings(); sfx('pop');
       } else if (b.dataset.set) {
         var v = b.dataset.val; save.set[b.dataset.set] = b.dataset.set === 'text' ? +v : v;
         persist(); applySettings(); renderSettings(); sfx('tick');
-      } else if (b.id === 'exDl') {
+      } else if (b.id === 'pwChange') { askNewPw(function () { renderSettings(); }); }
+      else if (b.id === 'parOpen') { renderParent(); show('parent'); }
+      else if (b.id === 'exDl') {
         try {
           var blob = new Blob([JSON.stringify(save)], { type: 'application/json' }), u = URL.createObjectURL(blob), a = document.createElement('a');
           a.href = u; a.download = 'dice-arcade-backup-' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -2931,6 +2965,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       var b = e.target.closest('button'); if (!b) return;
       var id = b.id;
       if (id === 'mClose') closeModal();
+      else if (id === 'kidHome') { closeModal(); run = null; cancelAnimationFrame(raf); renderHome(); show('home'); }
+      else if (id === 'pwOk' || id === 'pwSet') pwDone(id);
       else if (id === 'mGo') { closeModal(); paused = false; last = performance.now(); }
       else if (id === 'mImport' && window.__pendingImport) { save = window.__pendingImport; window.__pendingImport = null; persist(); setSkin(save.skin || 0); setBoard(save.board || 0); applySettings(); closeModal(); renderHome(); show('home'); }
       else if (id === 'mReset') { save = Prog.newSave(); fixSet(save); persist(); setSkin(0); setBoard(0); applySettings(); closeModal(); renderHome(); show('home'); }
@@ -2944,6 +2980,47 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     if (!run || run.over) return;
     paused = true;
     modal('<h2>Paused</h2><div class="btns" style="flex-direction:column"><button class="pri" id="pResume">▶ Resume</button><button id="pRestart">↻ Restart</button><button id="pQuit">Quit to levels</button></div>');
+  }
+
+  /* ---------- password, parent page ---------- */
+  var pwCb = null, pwMode = '';
+  function askPw(cb) {
+    if (!save.kid.pw) { cb(); return; }
+    pwCb = cb; pwMode = 'ask';
+    modal('<h2>🔒 Parent password</h2><p class="sub">Enter the password to open Settings.</p><input type="password" id="pwIn" class="pwin" autocomplete="off"><p class="sub" id="pwErr" style="color:var(--bad,#ff6b6b)"></p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="pwOk">Unlock</button></div>');
+    setTimeout(function () { var i = $('#pwIn'); if (i) i.focus(); }, 50);
+  }
+  function askNewPw(cb) {
+    pwCb = cb; pwMode = 'new';
+    modal('<h2>🔑 Set parent password</h2><p class="sub">At least 4 characters. Keep it safe: it is needed for Settings and cannot be recovered.</p><input type="password" id="pwIn" class="pwin" placeholder="New password" autocomplete="off"><input type="password" id="pwIn2" class="pwin" placeholder="Repeat password" autocomplete="off"><p class="sub" id="pwErr" style="color:var(--bad,#ff6b6b)"></p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="pwSet">Save</button></div>');
+    setTimeout(function () { var i = $('#pwIn'); if (i) i.focus(); }, 50);
+  }
+  function pwDone(id) {
+    var v = $('#pwIn').value, er = $('#pwErr');
+    if (id === 'pwOk') {
+      if (hashPw(v) !== save.kid.pw) { er.textContent = 'Wrong password.'; sfx('bad'); return; }
+    } else {
+      if (v.length < 4) { er.textContent = 'Use at least 4 characters.'; return; }
+      if (v !== $('#pwIn2').value) { er.textContent = 'The two entries do not match.'; return; }
+      save.kid.pw = hashPw(v); persist();
+    }
+    var cb = pwCb; pwCb = null; closeModal(); if (cb) cb();
+  }
+  function renderParent() {
+    var k = save.kid, h = '', gm, tot = 0, lv = 0, i;
+    kidRoll();
+    h += '<div class="set"><h3>⏱ Play time</h3>' +
+      '<div class="srow"><div class="lbl">Kids lock</div><b>' + (k.on ? 'On' : 'Off') + '</b></div>' +
+      '<div class="srow"><div class="lbl">Today<small>Limit 10 min a day</small></div><b>' + mmss(k.dsec) + ' / 10:00</b></div>' +
+      '<div class="srow"><div class="lbl">This week<small>Limit 30 min a week, resets Monday</small></div><b>' + mmss(k.wsec) + ' / 30:00</b></div></div>';
+    var days = '', d, key, mins;
+    for (i = 6; i >= 0; i--) { d = new Date(); d.setDate(d.getDate() - i); key = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); mins = key === k.dy ? k.dsec : (k.days[key] || 0); days += '<div class="pbar"><i style="height:' + Math.min(100, Math.round(mins / KID_DAY * 100)) + '%"></i><span>' + ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()] + '</span></div>'; }
+    h += '<div class="set"><h3>Last 7 days</h3><div class="pbars">' + days + '</div></div>';
+    var rows = '';
+    for (gm in Games) { var st = save.stars[gm] || {}, n = 0, c = 0, l; for (l in st) { n += st[l] || 0; if (st[l]) c++; } tot += n; lv += c; rows += '<div class="srow"><div class="lbl">' + Games[gm].icon + ' ' + Games[gm].name + '</div><b>' + c + ' levels · ' + n + ' ⭐</b></div>'; }
+    h += '<div class="set"><h3>📈 Progress</h3>' + rows + '<div class="srow"><div class="lbl">Total</div><b>' + lv + ' levels · ' + tot + ' ⭐ · ' + fmt(save.coins) + ' 🪙</b></div></div>';
+    h += '<div class="btns"><button id="parSet">⚙ Back to settings</button></div>';
+    $('#parBody').innerHTML = h;
   }
 
   /* ---------- settings ---------- */
@@ -2964,6 +3041,11 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   function renderSettings() {
     var s = save.set, h = '';
     h += '<div class="set"><h3>👤 Player</h3><div class="srow"><div class="lbl">Name<small>Shown on the home screen. Stays on this device.</small></div></div><input type="text" id="setName" maxlength="14" placeholder="Your name" value="' + (s.name || '').replace(/"/g, '') + '"></div>';
+    var kd = save.kid;
+    h += '<div class="set"><h3>👪 Parent area and kids lock</h3>' +
+      '<div class="srow"><div class="lbl">Kids lock<small>Limits play to 10 min a day and 30 min a week. Settings need your password.</small></div>' + tog('kid', kd.on) + '</div>' +
+      '<div class="srow"><div class="lbl">Password<small>' + (kd.pw ? 'Set. Needed to open Settings and the Parent page.' : 'Not set yet') + '</small></div><button id="pwChange">' + (kd.pw ? 'Change' : 'Set') + '</button></div>' +
+      '<div class="btns"><button class="pri" id="parOpen">👪 Open parent page</button></div></div>';
     h += '<div class="set"><h3>🔊 Sound and feel</h3>' +
       '<div class="srow"><div class="lbl">Sound effects</div>' + tog('sound', save.sound) + '</div>' +
       '<div class="srow"><div class="lbl">Volume</div><input type="range" id="setVol" min="0" max="1" step="0.05" value="' + s.vol + '"></div>' +

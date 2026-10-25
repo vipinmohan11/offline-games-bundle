@@ -22,7 +22,7 @@
     } catch (e) {}
     var n = Prog.newSave(); fixSet(n); return n;
   }
-  function fixSet(s) { s.set = s.set || {}; for (var k in DEF_SET) if (!(k in s.set)) s.set[k] = DEF_SET[k]; }
+  function fixSet(s) { if (!s.kid || typeof s.kid !== 'object') s.kid = { on: false, pw: '', wk: '', wsec: 0, dy: '', dsec: 0, days: {} }; s.set = s.set || {}; for (var k in DEF_SET) if (!(k in s.set)) s.set[k] = DEF_SET[k]; }
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch (e) {} }
   function today() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
   function rankName(r) { return RANKS[Math.min(RANKS.length - 1, Math.floor((r - 1) / 4))]; }
@@ -55,8 +55,14 @@
   }
 
   /* ---------- screens ---------- */
-  var screens = ['home', 'levels', 'album', 'settings', 'play'];
-  function show(id) { screens.forEach(function (s) { $('#' + s).classList.toggle('hidden', s !== id); }); }
+  var screens = ['home', 'levels', 'album', 'settings', 'parent', 'play'];
+  var unlocked = false, kidAcc = 0, KID_DAY = 600, KID_WEEK = 1800;
+  function hashPw(t) { var h = 5381, i; t = 'da1:' + t; for (i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) | 0; return String(h); }
+  function weekKey() { var d = new Date(); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); }
+  function kidRoll() { var k = save.kid, t = today(), w = weekKey(); if (k.dy !== t) { k.dy = t; k.dsec = 0; } if (k.wk !== w) { k.wk = w; k.wsec = 0; } }
+  function kidLeft() { if (!save.kid.on) return Infinity; kidRoll(); return Math.max(0, Math.min(KID_DAY - save.kid.dsec, KID_WEEK - save.kid.wsec)); }
+  function mmss(sec) { sec = Math.max(0, Math.ceil(sec)); return Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2); }
+  function show(id) { if (id !== 'settings' && id !== 'parent') unlocked = false; if (id !== 'play') { $('#play') && 0; } screens.forEach(function (s) { $('#' + s).classList.toggle('hidden', s !== id); }); }
   function modal(html) { var m = $('#modal'); m.innerHTML = '<div class="dlg">' + html + '</div>'; m.classList.remove('hidden'); }
   function closeModal() { var m = $('#modal'); m.classList.add('hidden'); m.innerHTML = ''; }
 
@@ -65,6 +71,7 @@
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
     $('#pAv').textContent = save.avatar || '🎲';
+    var kc = $('#kidChip'); if (kc) { var kl = kidLeft(); kc.classList.toggle('hidden', kl === Infinity); if (kl !== Infinity) kc.textContent = '⏱ ' + mmss(kl) + ' left'; }
     $('#pName').textContent = (save.set.name || 'Player') + ' · ' + TITLES[save.title || 0].t;
     var rk = Prog.rankOf(save.xp);
     $('#rankLine').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank) + ' · ' + rk.into + ' / ' + rk.need + ' XP';
@@ -196,6 +203,7 @@
 
   function startRun(id, level, timed, wantChal) {
     closeModal();
+    if (kidLeft() <= 0) { run = null; cancelAnimationFrame(raf); renderHome(); show('home'); modal('<h2>⏱ Play time is up</h2><p class="sub">You have used your play time for ' + (save.kid.dsec >= KID_DAY ? 'today (10 min a day)' : 'this week (30 min a week)') + '. Come back ' + (save.kid.dsec >= KID_DAY ? 'tomorrow' : 'next Monday') + '!</p><div class="btns"><button class="pri" id="mClose">OK</button></div>'); return; }
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
     run.challenge = false; $('#play').dataset.urg = 0;
@@ -308,11 +316,19 @@
     }
   }
 
+  function kidTick(dt) {
+    kidRoll(); var k = save.kid; k.dsec += dt; k.wsec += dt; kidAcc += dt;
+    if (kidAcc > 5 || kidLeft() <= 0) { kidAcc = 0; k.days[k.dy] = Math.round(k.dsec); var ks = Object.keys(k.days).sort(); while (ks.length > 14) delete k.days[ks.shift()]; persist(); }
+    if (kidLeft() <= 0 && run && !run.over) {
+      paused = true;
+      modal('<h2>⏱ Play time is up</h2><p class="sub">That is all for ' + (k.dsec >= KID_DAY ? 'today' : 'this week') + '. Great playing!</p><div class="btns"><button class="pri" id="kidHome">Home</button></div>');
+    }
+  }
   function loop(now) {
     raf = requestAnimationFrame(loop);
     var dt = Math.min(0.05, (now - last) / 1000); last = now;
     if (!run) return;
-    if (!paused && !run.over) { run.step(dt); updateHud(); }
+    if (!paused && !run.over) { run.step(dt); updateHud(); if (save.kid.on) kidTick(dt); }
     else if (run.over && !paused) { overT += dt; if (overT > 0.9 && !run.done) { run.done = true; onOver(); } }
     var W = run.W, H = run.H;
     ctx.clearRect(0, 0, W, H);
@@ -436,18 +452,24 @@
       modal('<h2>🎁 Daily gift!</h2><div class="big">+' + g.coins + ' 🪙</div><div class="sub">Day ' + g.streak + ' of 7. Come back tomorrow for more!</div><div class="gdays">' + days + '</div>' +
         (g.sticker != null ? '<div class="reveal"><div class="em">' + STICKERS[g.sticker] + '</div>New sticker!</div>' : '') + how + '<div class="btns"><button class="pri" id="mClose">Yay!</button></div>');
     });
-    on('#navSet', 'click', function () { renderSettings(); show('settings'); });
+    on('#navSet', 'click', function () { askPw(function () { unlocked = true; renderSettings(); show('settings'); }); });
+    on('#parBack', 'click', function () { renderHome(); show('home'); });
+    document.addEventListener('visibilitychange', function () { if (document.hidden && (!$('#settings').classList.contains('hidden') || !$('#parent').classList.contains('hidden'))) { renderHome(); show('home'); } });
+    $('#parBody').addEventListener('click', function (e) { var b = e.target.closest('button'); if (b && b.id === 'parSet') { renderSettings(); show('settings'); } });
     on('#stBack', 'click', function () { renderHome(); show('home'); });
     $('#stBody').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       if (b.dataset.tog) {
         var k = b.dataset.tog;
+        if (k === 'kid') { if (!save.kid.on && !save.kid.pw) { askNewPw(function () { save.kid.on = true; persist(); renderSettings(); }); return; } save.kid.on = !save.kid.on; persist(); renderSettings(); sfx('pop'); return; }
         if (k === 'sound') save.sound = !save.sound; else save.set[k] = !save.set[k];
         persist(); applySettings(); renderSettings(); sfx('pop');
       } else if (b.dataset.set) {
         var v = b.dataset.val; save.set[b.dataset.set] = b.dataset.set === 'text' ? +v : v;
         persist(); applySettings(); renderSettings(); sfx('tick');
-      } else if (b.id === 'exDl') {
+      } else if (b.id === 'pwChange') { askNewPw(function () { renderSettings(); }); }
+      else if (b.id === 'parOpen') { renderParent(); show('parent'); }
+      else if (b.id === 'exDl') {
         try {
           var blob = new Blob([JSON.stringify(save)], { type: 'application/json' }), u = URL.createObjectURL(blob), a = document.createElement('a');
           a.href = u; a.download = 'dice-arcade-backup-' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
@@ -509,6 +531,8 @@
       var b = e.target.closest('button'); if (!b) return;
       var id = b.id;
       if (id === 'mClose') closeModal();
+      else if (id === 'kidHome') { closeModal(); run = null; cancelAnimationFrame(raf); renderHome(); show('home'); }
+      else if (id === 'pwOk' || id === 'pwSet') pwDone(id);
       else if (id === 'mGo') { closeModal(); paused = false; last = performance.now(); }
       else if (id === 'mImport' && window.__pendingImport) { save = window.__pendingImport; window.__pendingImport = null; persist(); setSkin(save.skin || 0); setBoard(save.board || 0); applySettings(); closeModal(); renderHome(); show('home'); }
       else if (id === 'mReset') { save = Prog.newSave(); fixSet(save); persist(); setSkin(0); setBoard(0); applySettings(); closeModal(); renderHome(); show('home'); }
@@ -522,6 +546,47 @@
     if (!run || run.over) return;
     paused = true;
     modal('<h2>Paused</h2><div class="btns" style="flex-direction:column"><button class="pri" id="pResume">▶ Resume</button><button id="pRestart">↻ Restart</button><button id="pQuit">Quit to levels</button></div>');
+  }
+
+  /* ---------- password, parent page ---------- */
+  var pwCb = null, pwMode = '';
+  function askPw(cb) {
+    if (!save.kid.pw) { cb(); return; }
+    pwCb = cb; pwMode = 'ask';
+    modal('<h2>🔒 Parent password</h2><p class="sub">Enter the password to open Settings.</p><input type="password" id="pwIn" class="pwin" autocomplete="off"><p class="sub" id="pwErr" style="color:var(--bad,#ff6b6b)"></p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="pwOk">Unlock</button></div>');
+    setTimeout(function () { var i = $('#pwIn'); if (i) i.focus(); }, 50);
+  }
+  function askNewPw(cb) {
+    pwCb = cb; pwMode = 'new';
+    modal('<h2>🔑 Set parent password</h2><p class="sub">At least 4 characters. Keep it safe: it is needed for Settings and cannot be recovered.</p><input type="password" id="pwIn" class="pwin" placeholder="New password" autocomplete="off"><input type="password" id="pwIn2" class="pwin" placeholder="Repeat password" autocomplete="off"><p class="sub" id="pwErr" style="color:var(--bad,#ff6b6b)"></p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="pwSet">Save</button></div>');
+    setTimeout(function () { var i = $('#pwIn'); if (i) i.focus(); }, 50);
+  }
+  function pwDone(id) {
+    var v = $('#pwIn').value, er = $('#pwErr');
+    if (id === 'pwOk') {
+      if (hashPw(v) !== save.kid.pw) { er.textContent = 'Wrong password.'; sfx('bad'); return; }
+    } else {
+      if (v.length < 4) { er.textContent = 'Use at least 4 characters.'; return; }
+      if (v !== $('#pwIn2').value) { er.textContent = 'The two entries do not match.'; return; }
+      save.kid.pw = hashPw(v); persist();
+    }
+    var cb = pwCb; pwCb = null; closeModal(); if (cb) cb();
+  }
+  function renderParent() {
+    var k = save.kid, h = '', gm, tot = 0, lv = 0, i;
+    kidRoll();
+    h += '<div class="set"><h3>⏱ Play time</h3>' +
+      '<div class="srow"><div class="lbl">Kids lock</div><b>' + (k.on ? 'On' : 'Off') + '</b></div>' +
+      '<div class="srow"><div class="lbl">Today<small>Limit 10 min a day</small></div><b>' + mmss(k.dsec) + ' / 10:00</b></div>' +
+      '<div class="srow"><div class="lbl">This week<small>Limit 30 min a week, resets Monday</small></div><b>' + mmss(k.wsec) + ' / 30:00</b></div></div>';
+    var days = '', d, key, mins;
+    for (i = 6; i >= 0; i--) { d = new Date(); d.setDate(d.getDate() - i); key = d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); mins = key === k.dy ? k.dsec : (k.days[key] || 0); days += '<div class="pbar"><i style="height:' + Math.min(100, Math.round(mins / KID_DAY * 100)) + '%"></i><span>' + ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'][d.getDay()] + '</span></div>'; }
+    h += '<div class="set"><h3>Last 7 days</h3><div class="pbars">' + days + '</div></div>';
+    var rows = '';
+    for (gm in Games) { var st = save.stars[gm] || {}, n = 0, c = 0, l; for (l in st) { n += st[l] || 0; if (st[l]) c++; } tot += n; lv += c; rows += '<div class="srow"><div class="lbl">' + Games[gm].icon + ' ' + Games[gm].name + '</div><b>' + c + ' levels · ' + n + ' ⭐</b></div>'; }
+    h += '<div class="set"><h3>📈 Progress</h3>' + rows + '<div class="srow"><div class="lbl">Total</div><b>' + lv + ' levels · ' + tot + ' ⭐ · ' + fmt(save.coins) + ' 🪙</b></div></div>';
+    h += '<div class="btns"><button id="parSet">⚙ Back to settings</button></div>';
+    $('#parBody').innerHTML = h;
   }
 
   /* ---------- settings ---------- */
@@ -542,6 +607,11 @@
   function renderSettings() {
     var s = save.set, h = '';
     h += '<div class="set"><h3>👤 Player</h3><div class="srow"><div class="lbl">Name<small>Shown on the home screen. Stays on this device.</small></div></div><input type="text" id="setName" maxlength="14" placeholder="Your name" value="' + (s.name || '').replace(/"/g, '') + '"></div>';
+    var kd = save.kid;
+    h += '<div class="set"><h3>👪 Parent area and kids lock</h3>' +
+      '<div class="srow"><div class="lbl">Kids lock<small>Limits play to 10 min a day and 30 min a week. Settings need your password.</small></div>' + tog('kid', kd.on) + '</div>' +
+      '<div class="srow"><div class="lbl">Password<small>' + (kd.pw ? 'Set. Needed to open Settings and the Parent page.' : 'Not set yet') + '</small></div><button id="pwChange">' + (kd.pw ? 'Change' : 'Set') + '</button></div>' +
+      '<div class="btns"><button class="pri" id="parOpen">👪 Open parent page</button></div></div>';
     h += '<div class="set"><h3>🔊 Sound and feel</h3>' +
       '<div class="srow"><div class="lbl">Sound effects</div>' + tog('sound', save.sound) + '</div>' +
       '<div class="srow"><div class="lbl">Volume</div><input type="range" id="setVol" min="0" max="1" step="0.05" value="' + s.vol + '"></div>' +
