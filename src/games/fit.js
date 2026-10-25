@@ -231,9 +231,12 @@
   Fit.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.fit = {
+    goal: "Fill a full row or column to clear it",
+    intro: [["🧩", "Drag a shape onto the board"], ["▦▦▦▦▦▦▦▦", "Fill a whole row or column"], ["💥", "The line clears and scores"]],
     id: 'fit', name: 'Dice Fit', icon: '🧩', color: '#12b886', unit: 'Moves',
     blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.', howDe: 'Ziehe eine Form auf das Feld. Volle Reihen oder Spalten verschwinden.',
     par: 15, budget: function (l) { return 16 + Math.floor(l / 2); }, timedPar: 6.4, timedSecs: 90,
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); },
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Fit(env); }
   };

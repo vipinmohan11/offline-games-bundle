@@ -13,6 +13,8 @@
     this.shots = T ? Infinity : env.budget;
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     for (r = 0; r < this.rows0; r++) for (var c = 0; c < COLS; c++) if (env.rnd() < 0.92) this.g[r][c] = 1 + Math.floor(env.rnd() * this.nv);
+    this.rowEvery = T ? 12 : Math.max(10, 20 - 0.25 * Math.min(l, 40));      // seconds between new rows
+    this.rowT = this.rowEvery;
     this.miss = 0; this.proj = null; this.aim = null; this.falling = []; this.angle = Math.PI / 2; this.cool = 0; this.botT = 0;
     this.cur = this.pick(); this.next = this.pick();
     env.setLeft(this.shots);
@@ -112,7 +114,7 @@
       if (res.fall.length >= 3) this.env.say(res.fall.length + ' dice dropped!');
       this.miss = 0;
     } else this.miss++;
-    if (this.miss >= this.K) { this.pushRow(); this.miss = 0; }
+    if (tr.none || !(res.pop.length || res.fall.length)) this.env.mistake();                          // a miss or a shot that popped nothing
     this.shots--;
     this.env.setLeft(Math.max(0, this.shots));
     this.cur = this.next; this.next = this.pick();
@@ -131,10 +133,15 @@
     for (var r = ROWS - 1; r > 0; r--) this.g[r] = this.g[r - 1];
     this.g[0] = new Array(COLS).fill(0);
     for (var c = 0; c < COLS; c++) this.g[0][c] = 1 + Math.floor(this.env.rnd() * this.nv);
-    this.env.say('Ceiling drops!'); this.env.sfx('bad'); this.env.mistake();
+    this.env.say('New row!'); this.env.sfx('bad');
   };
   Shot.prototype.update = function (dt) {
     if (this.cool > 0) this.cool -= dt;
+    this.rowT -= dt;
+    if (this.rowT <= 0 && !this.proj && !this.env.over) {                    // a new row every few seconds, faster on higher levels
+      this.rowT = this.rowEvery; this.pushRow();
+      for (var c4 = 0; c4 < COLS; c4++) for (var r4 = DANGER; r4 < ROWS; r4++) if (this.g[r4][c4]) { this.env.finish({ overrun: true }); return; }
+    }
     var p = this.proj;
     if (p) {
       p.i += dt * 48 * (this.cell / 18);
@@ -191,7 +198,12 @@
     }
     text(c, 'NEXT', this.cx - s * 2.6, this.cy - s * 0.1, s * 0.3, '#aab');
     drawDie(c, this.cx - s * 2.95, this.cy + s * 0.05, s * 0.7, this.next);
-    text(c, 'Pops: same number, or two that add to 7', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
+    // next-row countdown bar above the wall
+    var fr = clamp(this.rowT / this.rowEvery, 0, 1);
+    c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS, 5);
+    c.fillStyle = fr < 0.25 ? '#ff6b6b' : '#ffa94d'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS * fr, 5);
+    text(c, '⬇ next row ' + Math.ceil(this.rowT) + 's', ox + s * COLS - 4, oy + s * ROWS + 16, Math.min(s * 0.3, 13), fr < 0.25 ? '#ff8787' : '#99a', 'right', '700');
+    text(c, 'Same number or sum 7 pops', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
   };
   Shot.prototype.angleTo = function (x, y) {
     var a = Math.atan2(-(y - this.cy), x - this.cx);
@@ -203,9 +215,12 @@
   Shot.prototype.btn = function (k) { if (k === 'swap') { var t = this.cur; this.cur = this.next; this.next = t; this.env.sfx('tick'); } };
 
   Games.shot = {
+    goal: "Same number or sum 7 pops · new rows come!",
+    intro: [["🎯 👆", "Drag to aim, let go to fire"], ["⚂ + ⚃ = 7", "Same number, or two that add to 7, pop"], ["⬇ ⬇", "New rows arrive on a timer!"]],
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
     blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
-    par: 38, budget: function (l) { return 22 + Math.floor(l / 2); }, timedPar: 9, timedSecs: 90,
+    par: 38, budget: function (l) { return 22 + Math.floor(l / 2); },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }
   };

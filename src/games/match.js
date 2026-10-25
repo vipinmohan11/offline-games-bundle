@@ -82,8 +82,17 @@
   Match.prototype.trySwap = function (a, b) {
     if (this.state !== 'idle' || this.env.over) return false;
     if (!this.adjacent(a, b)) return false;
-    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); this.env.mistake(); return false; }
+    var da0 = this.g[a[0]][a[1]], db0 = this.g[b[0]][b[1]];
+    if (da0.s === 3 || db0.s === 3) { this.shake = 0.25; this.env.sfx('bad'); return false; }         // stones never move
+    var bad = !this.validSwap(a, b);
     this.swapCells(this.g, a, b);
+    if (bad) {                                                                                       // a false swap really happens, costs a move and stays swapped
+      this.env.sfx('bad'); this.env.mistake(); this.sel = null; this.hintM = null; this.shake = 0.25;
+      if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
+      this.env.say('No match! Move lost');
+      this.chain = 0; this.swapA = null; this.afterResolve();
+      return true;
+    }
     this.swapA = [a, b]; this.chain = 0; this.sel = null; this.hintM = null;
     if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
     this.processSwap(a, b);
@@ -248,9 +257,12 @@
   Match.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.match = {
+    goal: "Swap to line up 3+ same dice",
+    intro: [["⚂ ⇄ ⚃", "Swap two neighbours"], ["⚂ ⚂ ⚂", "Line up 3 or more same dice"], ["⚠", "A wrong swap still happens and costs a move!"]],
     id: 'match', name: 'Dice Match', icon: '💎', color: '#f06595', unit: 'Moves',
     blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.', howDe: 'Tausche zwei Nachbarn, bis 3 oder mehr gleiche in einer Reihe sind. 4 machen eine Bombe, 5 einen Regenbogen-Würfel.',
-    par: 78, budget: function () { return 28; }, timedPar: 32, timedSecs: 90,
+    par: 78, budget: function () { return 28; },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 32, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Match(env); }
   };

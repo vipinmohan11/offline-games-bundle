@@ -191,6 +191,37 @@ button:active{transform:scale(.95) translateY(2px)}
 @keyframes bump{50%{transform:scale(1.18)}}
 .gcard,.lv{transition:transform .12s cubic-bezier(.3,1.6,.5,1),box-shadow .12s}
 
+/* ---- v2.1: bold arcade start page, goal intro, score/goal HUD ---- */
+#home{background:radial-gradient(120% 60% at 0% 0%,rgba(124,92,255,.38),transparent 60%),radial-gradient(110% 55% at 100% 100%,rgba(230,73,128,.32),transparent 60%),repeating-linear-gradient(135deg,rgba(255,255,255,.025) 0 14px,transparent 14px 28px),var(--bg)}
+.brand{text-transform:uppercase;letter-spacing:.08em;font-weight:900;color:#ffd43b;text-shadow:2px 2px 0 #e64980,4px 4px 0 rgba(0,0,0,.35)}
+.brand::before{content:"⚄";margin-right:8px;color:#fff;display:inline-block;transform:rotate(-10deg)}
+.gcard{overflow:hidden;align-items:flex-start;justify-content:flex-end;gap:3px;padding:10px 12px;text-align:left;background:var(--c,#7c5cff);background:linear-gradient(150deg,var(--c,#7c5cff) 0%,color-mix(in srgb,var(--c,#7c5cff) 45%,#000) 100%);border:3px solid #0b0e1f;box-shadow:0 5px 0 #0b0e1f,inset 0 0 0 2px rgba(255,255,255,.18)}
+.gcard .wm{position:absolute;right:-6px;top:-14px;font-size:clamp(70px,22vw,120px);line-height:1;color:rgba(255,255,255,.22);transform:rotate(14deg);pointer-events:none;text-shadow:none}
+.gcard .ic{position:absolute;left:10px;top:8px;font-size:clamp(26px,min(8vw,7vh),40px);filter:drop-shadow(0 2px 0 rgba(0,0,0,.35))}
+.gcard .nm{font-size:clamp(17px,5vw,26px);font-weight:900;text-transform:uppercase;letter-spacing:.04em;position:relative}
+.gcard .st{background:#0b0e1f;color:#ffd43b;position:relative}
+.gcard .sbar{width:100%;position:relative}
+.gcard:active{transform:translateY(4px);box-shadow:0 1px 0 #0b0e1f,inset 0 0 0 2px rgba(255,255,255,.18)}
+.dock button{background:#1b2040;border:3px solid #0b0e1f;box-shadow:0 4px 0 #0b0e1f}
+#gift.rdy{animation:none;box-shadow:0 0 0 3px #ffd43b,0 4px 0 #0b0e1f}
+#hudScore small{font-size:13px;font-weight:800;color:var(--muted);margin-left:4px}
+#hudGoal{font-size:11px;color:#b8c0e8;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+@media (orientation:landscape) and (max-height:620px){#hudGoal{white-space:normal;line-height:1.15}}
+.intro{text-align:center}
+.intro h2{margin:0 0 8px}
+.ipanels{display:flex;align-items:stretch;justify-content:center;gap:4px}
+.ip{flex:1;min-width:0;background:#1b2040;border:3px solid #0b0e1f;border-radius:12px;padding:8px 4px;display:flex;flex-direction:column;gap:6px;align-items:center;justify-content:center;animation:ipl 3s ease-in-out infinite}
+.ip:nth-child(3){animation-delay:1s}.ip:nth-child(5){animation-delay:2s}
+.ip b{font-size:clamp(20px,6vw,30px);line-height:1.1;white-space:nowrap}
+.ip small{font-size:12px;font-weight:700;color:var(--muted);line-height:1.2}
+.ia{align-self:center;color:var(--gold);font-size:14px}
+@keyframes ipl{0%,100%{transform:scale(1);border-color:#0b0e1f}15%,30%{transform:scale(1.07);border-color:#ffd43b;background:#2a3060}45%{transform:scale(1)}}
+.goalp{font-size:15px;margin:12px 0 8px}
+.skipbar{height:6px;background:#0e1226;border-radius:9px;overflow:hidden}.skipbar i{display:block;height:100%;width:0;background:#ffd43b;animation:skipb linear forwards}
+@keyframes skipb{to{width:100%}}
+.taphint{font-size:12px;color:var(--muted);margin-top:6px;font-weight:700}
+body.reduce .ip{animation:none}
+
 </style>
 </head>
 <body>
@@ -227,7 +258,7 @@ button:active{transform:scale(.95) translateY(2px)}
   <section id="play" class="screen hidden">
     <div id="hud">
       <button id="pause" aria-label="Pause">❚❚</button>
-      <div class="hmid"><div id="hudTitle"></div><div class="meter" id="meter"></div><div class="tbar hidden" id="tbar"><i></i></div></div>
+      <div class="hmid"><div id="hudTitle"></div><div id="hudGoal"></div><div class="meter" id="meter"></div><div class="tbar hidden" id="tbar"><i></i></div></div>
       <div class="hr"><div id="hudScore">0</div><div id="hudLeft"></div></div>
     </div>
     <div id="stage"><canvas id="cv"></canvas><div id="say"></div></div>
@@ -425,6 +456,8 @@ function mulberry(a) {
 /* Bot pacing so test bots play at a human speed (think = seconds per decision). */
 function botReady(g, dt) { g.botWait = (g.botWait || 0) - dt; return g.botWait <= 0; }
 function botDone(g) { var t = g.env.skill.think || 0; g.botWait = t * (0.7 + g.env.rnd() * 0.6); }
+/* Seconds a level clock allows per move: generous early, tighter later (never below 3.6 s). */
+function perMoveSecs(l) { return l <= 40 ? 8 - 0.1 * l : Math.max(3.6, 4 - 0.04 * (l - 40)); }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function rr(c, x, y, w, h, r) {
   c.beginPath(); c.moveTo(x + r, y);
@@ -490,7 +523,8 @@ function Run(G, level, timed, seed, ui, skill) {
   this.W = 360; this.H = 560;
   this.budget = this.timed ? Infinity : G.budget(level);
   this.left = this.budget;
-  this.timeLeft = this.timed ? G.timedSecs : null;
+  this.clockMax = this.timed ? G.timedSecs : (G.levelTime ? G.levelTime(level) : null);   // every level has a clock when the game defines levelTime
+  this.timeLeft = this.clockMax;
   this.thr = this.timed ? Prog.timedThr(G) : Prog.thresholds(G, level);
   this.game = G.create(this);
   this.game.resize(this.W, this.H);
@@ -521,7 +555,7 @@ Run.prototype.step = function (dt) {
   if (this.over) return;
   this.t += dt;
   this.game.update(dt);
-  if (this.timed && !this.over) {
+  if (this.timeLeft != null && !this.over) {
     this.timeLeft -= dt;
     if (this.timeLeft <= 0) { this.timeLeft = 0; this.finish({ timeUp: true }); }
   }
@@ -597,7 +631,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.env = env;
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     this.V = T ? 4 : Math.min(6, 3 + Math.floor((l - 1) / 6));
-    this.base = T ? 0.8 : Math.max(0.3, 0.92 - 0.0155 * l);
+    this.base0 = T ? 0.8 : Math.max(0.34, 0.92 - 0.015 * l);
+    this.base = this.base0;
     this.interval = this.base; this.timer = 0;
     this.pieces = T ? Infinity : env.budget;
     this.state = 'fall'; this.clr = null; this.chain = 0; this.hint = null; this.hintT = 0; this.botT = 0; this.plan = null;
@@ -682,7 +717,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   };
   Drop.prototype.update = function (dt) {
     this.hintT -= dt;
-    if (this.env.timed) this.base = Math.max(0.2, 0.8 - this.env.t * 0.0055);
+    if (this.env.timed) this.base = Math.max(0.16, 0.8 - this.env.t * 0.0075);
+    else this.base = Math.max(0.26, this.base0 * (1 - 0.25 * (1 - Math.max(0, this.pieces) / this.env.budget)));   // speeds up inside the level
     if (this.state === 'clear') {
       this.clr.t -= dt;
       if (this.clr.t <= 0) {
@@ -761,11 +797,6 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
     var cur = this.cur;
     if (cur && this.state === 'fall') {
-      var gy = this.land(cur.cells, cur.x);
-      for (i = 0; i < cur.cells.length; i++) {
-        rr(c, ox + (cur.x + cur.cells[i][0]) * s + 3, oy + (gy + cur.cells[i][1]) * s + 3, s - 6, s - 6, s * 0.2);
-        c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = 2; c.stroke();
-      }
       for (i = 0; i < cur.cells.length; i++) drawDie(c, ox + (cur.x + cur.cells[i][0]) * s, oy + (cur.y + cur.cells[i][1]) * s, s, cur.cells[i][2], { stroke: '#fff' });
     }
     if (this.hint && this.hintT > 0) {
@@ -790,9 +821,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Drop.prototype.btn = function (k) { if (k === 'l') this.move(-1); else if (k === 'r') this.move(1); else if (k === 'rot') this.rotate(); else if (k === 'drop') this.hard(); else if (k === 'hint') this.showHint(); };
 
   Games.drop = {
+    goal: "Match 3+ same dice to pop them",
+    intro: [["👆 ⟳ ⏬", "Move · turn · drop"], ["⚄ ⚄ ⚄", "3 same dice touch…"], ["💥", "…they pop! Chains score more"]],
     id: 'drop', name: 'Dice Drop', icon: '🎲', color: '#7c5cff', unit: 'Pieces',
     blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.', howDe: 'Ziehen = bewegen, Tippen = drehen, nach unten wischen = fallen lassen. 3 oder mehr gleiche Würfel zusammen verschwinden.',
-    par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); }, timedPar: 10.6, timedSecs: 90,
+    par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 10.6, timedSecs: 90,
     controls: [{ k: 'l', t: '◀' }, { k: 'rot', t: '⟳' }, { k: 'r', t: '▶' }, { k: 'drop', t: '⏬' }, { k: 'hint', t: '💡' }],
     create: function (env) { return new Drop(env); }
   };
@@ -1032,9 +1066,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Fit.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.fit = {
+    goal: "Fill a full row or column to clear it",
+    intro: [["🧩", "Drag a shape onto the board"], ["▦▦▦▦▦▦▦▦", "Fill a whole row or column"], ["💥", "The line clears and scores"]],
     id: 'fit', name: 'Dice Fit', icon: '🧩', color: '#12b886', unit: 'Moves',
     blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.', howDe: 'Ziehe eine Form auf das Feld. Volle Reihen oder Spalten verschwinden.',
     par: 15, budget: function (l) { return 16 + Math.floor(l / 2); }, timedPar: 6.4, timedSecs: 90,
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); },
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Fit(env); }
   };
@@ -1209,7 +1246,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     text(c, 'NEXT', ox + s * 0.1, oy - s * 1.3, s * 0.28, '#cde', 'left');
     drawDie(c, ox + s * 0.1, oy - s * 1.1, s * 0.6, this.next);
     text(c, this.W_.bloom + ' ' + this.flowers, ox + COLS * s - 4, oy - s * 1.3, s * 0.4, '#ffd43b', 'right');
-    text(c, this.W_.name, ox + COLS * s - 4, oy - s * 0.7, s * 0.28, '#cde', 'right');
+    text(c, '1 → 2 → 3 → 4 → 5 → ' + this.W_.bloom + '   (3 same merge)', ox + COLS * s - 4, oy - s * 0.62, Math.min(s * 0.27, 14), '#cde', 'right');
   };
   Garden.prototype.colAt = function (x) { return clamp(Math.floor((x - this.ox) / this.cell), 0, COLS - 1); };
   Garden.prototype.pd = function (x) { this.col = this.colAt(x); this.down = true; };
@@ -1218,9 +1255,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Garden.prototype.btn = function (k) { if (k === 'hint') { var m = this.bestCol(false); if (m) { this.col = m.c; this.env.say('Try the glowing column'); } } };
 
   Games.garden = {
+    goal: "Merge 3 same dice · three 5s = a flower",
+    intro: [["⚀ ⚀ ⚀", "Drop 3 same dice together"], ["→ ⚁", "They merge into the next number"], ["⚄⚄⚄ → 🌸", "Three 5s bloom a flower!"]],
     id: 'garden', name: 'Dice Garden', icon: '🌸', color: '#40c057', unit: 'Drops',
     blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.', howDe: 'Ziehe über eine Spalte und lass los. 3 gleiche Würfel werden zur nächsten Zahl. Drei Fünfen lassen eine Blume blühen.',
     par: 21, budget: function (l) { return 30 + Math.floor(l * 0.7); }, timedPar: 5.4, timedSecs: 90,
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); },
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Garden(env); }
   };
@@ -1311,8 +1351,17 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Match.prototype.trySwap = function (a, b) {
     if (this.state !== 'idle' || this.env.over) return false;
     if (!this.adjacent(a, b)) return false;
-    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); this.env.mistake(); return false; }
+    var da0 = this.g[a[0]][a[1]], db0 = this.g[b[0]][b[1]];
+    if (da0.s === 3 || db0.s === 3) { this.shake = 0.25; this.env.sfx('bad'); return false; }         // stones never move
+    var bad = !this.validSwap(a, b);
     this.swapCells(this.g, a, b);
+    if (bad) {                                                                                       // a false swap really happens, costs a move and stays swapped
+      this.env.sfx('bad'); this.env.mistake(); this.sel = null; this.hintM = null; this.shake = 0.25;
+      if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
+      this.env.say('No match! Move lost');
+      this.chain = 0; this.swapA = null; this.afterResolve();
+      return true;
+    }
     this.swapA = [a, b]; this.chain = 0; this.sel = null; this.hintM = null;
     if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
     this.processSwap(a, b);
@@ -1477,9 +1526,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Match.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.match = {
+    goal: "Swap to line up 3+ same dice",
+    intro: [["⚂ ⇄ ⚃", "Swap two neighbours"], ["⚂ ⚂ ⚂", "Line up 3 or more same dice"], ["⚠", "A wrong swap still happens and costs a move!"]],
     id: 'match', name: 'Dice Match', icon: '💎', color: '#f06595', unit: 'Moves',
     blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.', howDe: 'Tausche zwei Nachbarn, bis 3 oder mehr gleiche in einer Reihe sind. 4 machen eine Bombe, 5 einen Regenbogen-Würfel.',
-    par: 78, budget: function () { return 28; }, timedPar: 32, timedSecs: 90,
+    par: 78, budget: function () { return 28; },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 32, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Match(env); }
   };
@@ -1501,6 +1553,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.shots = T ? Infinity : env.budget;
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     for (r = 0; r < this.rows0; r++) for (var c = 0; c < COLS; c++) if (env.rnd() < 0.92) this.g[r][c] = 1 + Math.floor(env.rnd() * this.nv);
+    this.rowEvery = T ? 12 : Math.max(10, 20 - 0.25 * Math.min(l, 40));      // seconds between new rows
+    this.rowT = this.rowEvery;
     this.miss = 0; this.proj = null; this.aim = null; this.falling = []; this.angle = Math.PI / 2; this.cool = 0; this.botT = 0;
     this.cur = this.pick(); this.next = this.pick();
     env.setLeft(this.shots);
@@ -1600,7 +1654,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       if (res.fall.length >= 3) this.env.say(res.fall.length + ' dice dropped!');
       this.miss = 0;
     } else this.miss++;
-    if (this.miss >= this.K) { this.pushRow(); this.miss = 0; }
+    if (tr.none || !(res.pop.length || res.fall.length)) this.env.mistake();                          // a miss or a shot that popped nothing
     this.shots--;
     this.env.setLeft(Math.max(0, this.shots));
     this.cur = this.next; this.next = this.pick();
@@ -1619,10 +1673,15 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     for (var r = ROWS - 1; r > 0; r--) this.g[r] = this.g[r - 1];
     this.g[0] = new Array(COLS).fill(0);
     for (var c = 0; c < COLS; c++) this.g[0][c] = 1 + Math.floor(this.env.rnd() * this.nv);
-    this.env.say('Ceiling drops!'); this.env.sfx('bad'); this.env.mistake();
+    this.env.say('New row!'); this.env.sfx('bad');
   };
   Shot.prototype.update = function (dt) {
     if (this.cool > 0) this.cool -= dt;
+    this.rowT -= dt;
+    if (this.rowT <= 0 && !this.proj && !this.env.over) {                    // a new row every few seconds, faster on higher levels
+      this.rowT = this.rowEvery; this.pushRow();
+      for (var c4 = 0; c4 < COLS; c4++) for (var r4 = DANGER; r4 < ROWS; r4++) if (this.g[r4][c4]) { this.env.finish({ overrun: true }); return; }
+    }
     var p = this.proj;
     if (p) {
       p.i += dt * 48 * (this.cell / 18);
@@ -1679,7 +1738,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     }
     text(c, 'NEXT', this.cx - s * 2.6, this.cy - s * 0.1, s * 0.3, '#aab');
     drawDie(c, this.cx - s * 2.95, this.cy + s * 0.05, s * 0.7, this.next);
-    text(c, 'Pops: same number, or two that add to 7', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
+    // next-row countdown bar above the wall
+    var fr = clamp(this.rowT / this.rowEvery, 0, 1);
+    c.fillStyle = 'rgba(255,255,255,0.12)'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS, 5);
+    c.fillStyle = fr < 0.25 ? '#ff6b6b' : '#ffa94d'; c.fillRect(ox, oy + s * ROWS + 2, s * COLS * fr, 5);
+    text(c, '⬇ next row ' + Math.ceil(this.rowT) + 's', ox + s * COLS - 4, oy + s * ROWS + 16, Math.min(s * 0.3, 13), fr < 0.25 ? '#ff8787' : '#99a', 'right', '700');
+    text(c, 'Same number or sum 7 pops', this.cx, this.cy + s * 1.25, Math.min(s * 0.3, 15), '#99a', 'center', '500');
   };
   Shot.prototype.angleTo = function (x, y) {
     var a = Math.atan2(-(y - this.cy), x - this.cx);
@@ -1691,9 +1755,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Shot.prototype.btn = function (k) { if (k === 'swap') { var t = this.cur; this.cur = this.next; this.next = t; this.env.sfx('tick'); } };
 
   Games.shot = {
+    goal: "Same number or sum 7 pops · new rows come!",
+    intro: [["🎯 👆", "Drag to aim, let go to fire"], ["⚂ + ⚃ = 7", "Same number, or two that add to 7, pop"], ["⬇ ⬇", "New rows arrive on a timer!"]],
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
     blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
-    par: 38, budget: function (l) { return 22 + Math.floor(l / 2); }, timedPar: 9, timedSecs: 90,
+    par: 38, budget: function (l) { return 22 + Math.floor(l / 2); },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }
   };
@@ -1720,24 +1787,33 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.env = env;
     this.tier = T ? 0 : tierOf(l);
     this.rule = this.tier >= 4 ? Math.floor(env.rnd() * 4) : this.tier;
-    this.tt = T ? 3.6 : Math.max(1.8, 4.4 - 0.06 * l);        // seconds from top to the bins
+    this.tt = T ? 3.2 : Math.max(1.3, 4.0 - 0.07 * l);        // seconds from top to the bins
     this.items = []; this.spawnT = 0.4; this.spawned = 0; this.sorted = 0; this.streak = 0; this.lives = 3;
     this.total = T ? Infinity : env.budget;
+    this.shuffleBins(); this.sinceShuf = 0;
     this.freeze = 0; this.flash = null; this.press = -1; this.sinceRule = 0; this.ruleSecs = 0;
     env.setLeft(this.total);
   }
   Rush.prototype.R = function () { return RULES[this.rule]; };
   Rush.prototype.speedMul = function () {
-    if (this.env.timed) return Math.pow(0.987, this.env.t);
-    return Math.pow(0.965, Math.floor(this.sorted / 8));
+    if (this.env.timed) return Math.pow(0.982, this.env.t);
+    return Math.max(0.35, Math.pow(0.95, Math.floor(this.sorted / 5)));        // speeds up every 5 dice, even inside a level
+  };
+  /* Bin positions and colours are shuffled so neither place nor colour can be memorised. */
+  Rush.prototype.shuffleBins = function () {
+    var n = this.R().bins.length, rnd = this.env.rnd, i, j, t;
+    this.perm = []; for (i = 0; i < n; i++) this.perm.push(i);          // slot -> bin index
+    for (i = n - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); t = this.perm[i]; this.perm[i] = this.perm[j]; this.perm[j] = t; }
+    this.cols = BINCOL.slice(); for (i = this.cols.length - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); t = this.cols[i]; this.cols[i] = this.cols[j]; this.cols[j] = t; }
   };
   Rush.prototype.makeItem = function () {
     var R = this.R(), d = [];
     for (var i = 0; i < R.n; i++) d.push(1 + Math.floor(this.env.rnd() * 6));
-    return { d: d, y: 0, age: 0 };
+    var fc = Skin.cur.faces;
+    return { d: d, y: 0, age: 0, col: [fc[Math.floor(this.env.rnd() * 6)], fc[Math.floor(this.env.rnd() * 6)]] };   // die colour tells nothing about its value
   };
   Rush.prototype.setRule = function (r, msg) {
-    this.rule = r; this.freeze = 1.1; this.env.say(msg || 'New rule: ' + RULES[r].tip); this.env.sfx('combo');
+    this.rule = r; this.shuffleBins(); this.freeze = 1.1; this.env.say(msg || 'New rule: ' + RULES[r].tip); this.env.sfx('combo');
     // refresh dice already on the belt so they match the new rule's dice count
     this.items.forEach(function (it) { var n = RULES[r].n; while (it.d.length < n) it.d.push(1 + Math.floor(this.env.rnd() * 6)); it.d.length = n; }, this);
   };
@@ -1768,6 +1844,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     if (this.env.over) return;
     if (!this.env.timed) {
       if (this.sorted >= this.total) { this.env.finish({ done: true, lives: this.lives }); return; }
+      if ((this.env.level >= 3) && this.sorted % 10 === 0 && this.sorted < this.total && this.tier < 4) { this.shuffleBins(); this.env.say('Bins swapped!'); this.env.sfx('combo'); }
       if (this.tier >= 4 && this.sorted % 8 === 0 && this.sorted < this.total) {
         var r; do { r = Math.floor(this.env.rnd() * 4); } while (r === this.rule);
         this.setRule(r);
@@ -1823,15 +1900,15 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var travel = this.binTop - this.ds * 0.9;
     for (i = this.items.length - 1; i >= 0; i--) {
       var it = this.items[i], y = it.y * travel;
-      if (it.d.length === 1) drawDie(c, this.cx - this.ds / 2, y, this.ds, it.d[0], { stroke: i === 0 ? '#fff' : null });
-      else { drawDie(c, this.cx - this.ds * 1.05, y, this.ds, it.d[0], { stroke: i === 0 ? '#fff' : null }); drawDie(c, this.cx + this.ds * 0.05, y, this.ds, it.d[1], { stroke: i === 0 ? '#fff' : null }); }
+      if (it.d.length === 1) drawDie(c, this.cx - this.ds / 2, y, this.ds, it.d[0], { color: it.col[0], stroke: i === 0 ? '#fff' : null });
+      else { drawDie(c, this.cx - this.ds * 1.05, y, this.ds, it.d[0], { color: it.col[0], stroke: i === 0 ? '#fff' : null }); drawDie(c, this.cx + this.ds * 0.05, y, this.ds, it.d[1], { color: it.col[1], stroke: i === 0 ? '#fff' : null }); }
     }
     c.restore();
     var bw = this.laneW / nb;
     for (i = 0; i < nb; i++) {
-      var x = this.lx + i * bw, pr = this.press === i;
-      rr(c, x + 4, this.binTop, bw - 8, this.binH, 16); c.fillStyle = pr ? '#fff' : BINCOL[i]; c.fill();
-      text(c, R.bins[i], x + bw / 2, this.binTop + this.binH / 2, Math.min(bw * 0.24, this.binH * 0.32, 42), pr ? '#222' : '#10203a');
+      var x = this.lx + i * bw, bi = this.perm[i], pr = this.press === bi;
+      rr(c, x + 4, this.binTop, bw - 8, this.binH, 16); c.fillStyle = pr ? '#fff' : this.cols[i]; c.fill();
+      text(c, R.bins[bi], x + bw / 2, this.binTop + this.binH / 2, Math.min(bw * 0.24, this.binH * 0.32, 42), pr ? '#222' : '#10203a');
     }
     for (i = 0; i < Math.max(3, this.lives); i++) text(c, i < this.lives ? '❤️' : '🖤', this.lx + 18 + i * 26, 26, 20);
     var mult = 1 + Math.min(3, Math.floor(this.streak / 5));
@@ -1843,11 +1920,13 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Rush.prototype.pd = function (x, y) {
     if (y < this.binTop - 10) return;
     var nb = this.R().bins.length, i = Math.floor((x - this.lx) / (this.laneW / nb));
-    if (i >= 0 && i < nb) this.sort(i);
+    if (i >= 0 && i < nb) this.sort(this.perm[i]);
   };
   Rush.prototype.pm = function () {}; Rush.prototype.pu = function () {}; Rush.prototype.btn = function () {};
 
   Games.rush = {
+    goal: "Tap the bin that fits the front die",
+    intro: [["⚃ ?", "Look at the front die"], ["EVEN │ ODD", "Tap the matching bin"], ["🔀", "Bins and colours get mixed up!"]],
     id: 'rush', name: 'Dice Rush', icon: '⚡', color: '#fab005', unit: 'Dice',
     blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!', howDe: 'Tippe den Behälter, der zum vordersten Würfel passt. Serien geben mehr Punkte. Nur 3 Herzen!',
     par: 41, budget: function (l) { return 50 + Math.floor(l * 1.6); }, timedPar: 35, timedSecs: 60,
@@ -1865,7 +1944,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var l = env.level, T = env.timed;
     this.env = env;
     this.drops = T ? Infinity : env.budget;
-    this.speed0 = T ? 0.6 : Math.min(1.3, 0.4 + 0.022 * l);                  // screen widths per second
+    this.speed0 = T ? 0.6 : Math.min(1.55, 0.45 + 0.027 * l);                  // screen widths per second
     this.w0f = T ? 0.5 : Math.max(0.26, 0.58 - 0.0075 * l);
     this.win = T ? 0.03 : Math.max(0.014, 0.052 - 0.00085 * l);                // perfect window in seconds (tightens every level)
     this.blocks = []; this.debris = []; this.n = 0; this.streak = 0; this.phase = 0; this.dir = 1; this.botTarget = null; this.dropped = false;
@@ -1879,7 +1958,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   };
   Tower.prototype.top = function () { return this.blocks[this.blocks.length - 1]; };
   Tower.prototype.speed = function () {
-    var s = this.speed0 * (1 + 0.012 * Math.min(this.n, 40));
+    var s = this.speed0 * (1 + 0.02 * Math.min(this.n, 40));
     if (this.env.timed) s *= 1 + this.env.t * 0.004;
     return s * this.W;
   };
@@ -1987,6 +2066,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Tower.prototype.pm = function () {}; Tower.prototype.pu = function () {}; Tower.prototype.btn = function (k) { if (k === 'drop') this.drop(); };
 
   Games.tower = {
+    goal: "Tap to drop the row · stack it straight",
+    intro: [["↔ ⚅⚅⚅", "The row swings left and right"], ["👆 TAP", "Tap to drop it on the tower"], ["🗼", "Line it up. Overhang is cut off"]],
     id: 'tower', name: 'Dice Tower', icon: '🗼', color: '#339af0', unit: 'Drops',
     blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.', howDe: 'Tippe, um den Würfel fallen zu lassen. Triff genau, dann bleibt er breit und du bekommst eine Serie.',
     par: 28, budget: function (l) { return 50 + 2 * l; }, timedPar: 11, timedSecs: 60,
@@ -2000,7 +2081,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 /* Dice Duel: you vs the computer on a 5x5 board. Roll, then place your die. A bigger die flips the smaller
    enemy dice next to it. When the board is full the bigger pip total wins the round. Best of 3. */
 (function () {
-  var N = 5, ME = 1, CPU = 2, COLOR = { 1: '#4dabf7', 2: '#ff8787' };
+  var BOT = 'Bolt', N = 5, ME = 1, CPU = 2, COLOR = { 1: '#4dabf7', 2: '#ff8787' };
   var D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
   function sums(b) {
@@ -2057,6 +2138,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.look = !T && l >= 32;
     this.hand = T ? 0 : Math.min(4, Math.floor(l / 10));
     this.cpuMaxF = T ? 5 : Math.min(6, 3 + l / 10);      // early CPU rolls smaller dice
+    this.turnSecs = T ? 8 : Math.max(4, 12 - 0.2 * Math.min(l, 40));        // time to place your die
+    this.tt = this.turnSecs;
     this.wins = [0, 0, 0]; this.margin = 0; this.round = 0; this.score = 0; this.flip = {}; this.hov = null; this.hint = null; this.hintT = 0;
     this.startRound();
   }
@@ -2072,7 +2155,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   };
   Duel.prototype.roll = function () { var mx = 6;
     if (this.turn === CPU) { mx = Math.min(6, Math.floor(this.cpuMaxF) + (this.env.rnd() < this.cpuMaxF % 1 ? 1 : 0)); }
-    this.die = 1 + this.rand(mx); };
+    this.die = 1 + this.rand(mx); this.tt = this.turnSecs; };
   Duel.prototype.play = function (i, who) {
     if (this.state !== 'play' || this.turn !== who || this.b[i].o) return false;
     var fl = place(this.b, i, who, this.die), s = this.cell;
@@ -2093,7 +2176,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     else { pts = 20; }
     if (pts) this.env.addScore(pts, this.W / 2, this.oy + this.cell * 2.5, '#ffd43b');
     this.env.sfx(won ? 'win' : 'bad');
-    this.banner = { text: won ? 'You win the round!' : tie ? 'Draw!' : 'CPU wins the round', me: me, cpu: cpu, t: 1.7 };
+    this.banner = { text: won ? 'You win the round!' : tie ? 'Draw!' : BOT + ' wins the round', me: me, cpu: cpu, t: 1.7 };
     this.state = 'between';
   };
   Duel.prototype.afterRound = function () {
@@ -2109,6 +2192,13 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     if (this.state === 'between') { this.banner.t -= dt; if (this.banner.t <= 0) this.afterRound(); return; }
     if (this.state !== 'play') return;
     if (this.wait > 0) { this.wait -= dt; return; }
+    if (this.turn === ME) {
+      this.tt -= dt;
+      if (this.tt <= 0) {                                      // out of time: a random square is played for you
+        var em = empties(this.b); this.env.say('Too slow!'); this.env.mistake();
+        if (em.length) this.play(em[this.rand(em.length)], ME);
+      }
+    }
     if (this.turn === CPU) {
       var i = choose(this.b, CPU, this.die, this.eps, this.look, this.env.rnd);
       if (i >= 0) this.play(i, CPU);
@@ -2167,25 +2257,30 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
         rr(c, bx, cy - 26, pw * 0.38, 6, 3); c.fillStyle = COLOR[who]; c.globalAlpha = this.turn === who ? pul : 0.18; c.fill(); c.globalAlpha = 1;
       }, this);
     }
+    // pip race bar: who is ahead right now
+    var tot = Math.max(1, sm[ME] + sm[CPU]), bx0 = px + pw * 0.04, bww = pw * 0.92, byy = cy + 18;
+    rr(c, bx0, byy, bww, 7, 3); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    rr(c, bx0, byy, Math.max(4, bww * sm[ME] / tot), 7, 3); c.fillStyle = COLOR[ME]; c.fill();
+    if (sm[CPU]) { rr(c, bx0 + bww * sm[ME] / tot + 1, byy, Math.max(4, bww * sm[CPU] / tot - 1), 7, 3); c.fillStyle = COLOR[CPU]; c.fill(); }
     text(c, '● You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
-    text(c, '◆ CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
+    text(c, '◆ ' + BOT + ' ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
     if (!this.env.timed) {
       var wr = '', k; for (k = 0; k < 2; k++) wr += (k < this.wins[ME] ? '🏆' : '▫️') + ' ';
-      text(c, wr, px + pw * 0.25, cy + 34, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
-      text(c, wc, px + pw * 0.75, cy + 34, 20);
-      text(c, 'Round ' + Math.min(this.round, 3), px + pw * 0.5, cy + 34, 14, '#99a');
-    } else text(c, 'Round ' + this.round + ' · wins ' + this.wins[ME], px + pw * 0.5, cy + 34, 14, '#99a');
-    var dy = cy + 34 + Math.min(70, s * 1.0);
+      text(c, wr, px + pw * 0.25, cy + 40, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
+      text(c, wc, px + pw * 0.75, cy + 40, 20);
+      text(c, 'Round ' + Math.min(this.round, 3), px + pw * 0.5, cy + 40, 14, '#99a');
+    } else text(c, 'Round ' + this.round + ' · wins ' + this.wins[ME], px + pw * 0.5, cy + 40, 14, '#99a');
+    var dy = cy + 40 + Math.min(70, s * 1.0);
     var ds = Math.min(s * 1.0, 70);
     if (this.state === 'play') {
       var mine = this.turn === ME;
-      text(c, mine ? 'Your die - tap a square' : 'CPU is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? '#fff' : '#99a', 'center', '600');
+      text(c, mine ? 'Your die - tap a square (' + Math.max(0, Math.ceil(this.tt)) + 's)' : BOT + ' is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? (this.tt < 3 ? '#ff8787' : '#fff') : '#99a', 'center', '600');
       drawDie(c, px + pw / 2 - ds / 2, dy - ds * 0.55, ds, this.die, { color: COLOR[this.turn], stroke: '#fff' });
     }
     if (this.banner) {
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox, oy + bw * 0.34, bw, bw * 0.32);
       text(c, this.banner.text, ox + bw / 2, oy + bw * 0.46, Math.min(28, s * 0.55), '#ffd43b');
-      text(c, 'You ' + this.banner.me + '  -  CPU ' + this.banner.cpu, ox + bw / 2, oy + bw * 0.57, Math.min(22, s * 0.42), '#fff');
+      text(c, 'You ' + this.banner.me + '  -  ' + BOT + ' ' + this.banner.cpu, ox + bw / 2, oy + bw * 0.57, Math.min(22, s * 0.42), '#fff');
     }
   };
   Duel.prototype.cellAt = function (x, y) {
@@ -2198,8 +2293,10 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Duel.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.duel = {
+    goal: "A bigger die flips smaller enemy dice",
+    intro: [["🔵⚅  🔴⚂", "Place your die on a free square"], ["⚅ ▶ ⚂", "A bigger die flips smaller enemy dice next to it"], ["🏆 🏆", "Most pips when full wins the round. Win 2!"]],
     id: 'duel', name: 'Dice Duel', icon: '⚔️', color: '#e64980', unit: 'Rounds', noMeter: true,
-    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
+    blurb: 'Beat Bolt the robot, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
     par: 1, budget: function () { return 3; }, timedPar: 3.8, timedSecs: 120,
     thresholds: function () { return [1, 2, 3]; },
     stars: function (l, r) {
@@ -2281,7 +2378,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
-    $('.brand').textContent = save.set.name ? '🎲 ' + save.set.name + '\'s Dice Arcade' : '🎲 Dice Arcade';
+    $('.brand').textContent = save.set.name ? save.set.name + '\'s Dice Arcade' : 'Dice Arcade';
     var rk = Prog.rankOf(save.xp);
     $('#rankName').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank);
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
@@ -2293,8 +2390,8 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     ORDER.forEach(function (id) {
       var g = Games[id];
       var pct = Math.round(100 * Prog.totalStars(save, id) / (Prog.LEVELS * 3));
-      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
-        '</span><span class="st">Lv ' + topLevel(id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
+      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="wm">' + '⚀⚁⚂⚃⚄⚅'.charAt(ORDER.indexOf(id) % 6) + '</span><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
+        '</span><span class="st">LV ' + topLevel(id) + ' · ⭐ ' + Prog.totalStars(save, id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
     });
     $('#cards').innerHTML = h;
   }
@@ -2393,32 +2490,62 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       c.appendChild(e);
     });
     show('play'); fitCanvas(); updateHud();
-    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
+    $('#hudGoal').textContent = G.goal || '';
+    var first = !save.seen[id];
+    if (first) { save.seen[id] = 1; persist(); }
+    if (first || (!timed && level <= 10)) showIntro(first);
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+
+  /* Goal intro: an animated 3-step card shown 3 s before every run until level 10 (and the first time ever). Tap to skip. */
+  var introT = 0;
+  function goalLine() {
+    var h = '';
+    if (G.noMeter && !run.timed) h = G.starHelp(run.level);
+    else {
+      h = '🎯 Goal: <b>' + fmt(run.thr[0]) + '</b> points for ⭐';
+      if (isFinite(run.budget)) h += ' in <b>' + run.budget + '</b> ' + G.unit.toLowerCase();
+    }
+    if (run.timeLeft != null) h += ' · ⏱ <b>' + clockStr(run.clockMax) + '</b>';
+    return h;
+  }
+  function showIntro(long) {
+    paused = true;
+    var panels = (G.intro || []).map(function (p) { return '<div class="ip"><b>' + p[0] + '</b><small>' + p[1] + '</small></div>'; }).join('<span class="ia">▶</span>');
+    var secs = long ? 4 : 3;
+    modal('<div class="intro" id="intro"><h2>' + G.icon + ' ' + G.name + '</h2><div class="ipanels">' + panels + '</div><p class="goalp">' + goalLine() + '</p>' +
+      (long ? '<p class="sub"><i>' + G.howDe + '</i></p>' : '') + '<div class="skipbar"><i style="animation-duration:' + secs + 's"></i></div><div class="taphint">Tap to start</div></div>');
+    clearTimeout(introT);
+    var go = function () { if ($('#intro')) { closeModal(); paused = false; last = performance.now(); } };
+    introT = setTimeout(go, secs * 1000);
+    $('#intro').addEventListener('pointerdown', function () { clearTimeout(introT); go(); });
   }
 
   function buildMeter() {
     var m = $('#meter'), tb = $('#tbar');
-    tb.classList.toggle('hidden', !run.timed);
+    tb.classList.toggle('hidden', run.timeLeft == null);
     if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:12px;color:#9aa3c7;font-weight:700;padding-top:1px;white-space:normal;line-height:1.1;margin-top:-4px">' + G.starHelp(run.level) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
     m.style.background = ''; m.style.height = '';
     var max = run.thr[2] * 1.12, h = '<i id="meterFill"></i>';
     run.thr.forEach(function (t, k) { h += '<u data-k="' + k + '" style="left:' + (100 * t / max) + '%">' + (run.timed ? ['🥉', '🥈', '🥇'][k] : '⭐') + '</u>'; });
     m.innerHTML = h; run.meterMax = max;
   }
+  function clockStr(t) { t = Math.ceil(t); return t >= 100 ? Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2) : t + 's'; }
   function updateHud() {
     if (!run) return;
     var hs = $('#hudScore'), st = fmt(run.score);
-    if (hs.textContent !== st) { hs.textContent = st; if (save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
-    var urg = 0;
-    if (run.timed) { var fr = run.timeLeft / G.timedSecs; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
+    var gl = null; if (!(G.noMeter && !run.timed)) { gl = run.thr[2]; for (var q = 0; q < 3; q++) if (run.score < run.thr[q]) { gl = run.thr[q]; break; } }
+    var hh = st + (gl != null ? '<small>/ ' + fmt(gl) + '</small>' : '');
+    if (run.hs !== hh) { var grew = run.hs != null; run.hs = hh; hs.innerHTML = hh; if (grew && save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
+    var urg = 0, hasClock = run.timeLeft != null;
+    if (hasClock) { var fr = run.timeLeft / run.clockMax; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
     else if (G.id === 'rush' && run.game.lives === 1) urg = 1;
     if ($('#play').dataset.urg !== String(urg)) $('#play').dataset.urg = urg;
-    if (run.timed && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
-    var left = run.timed ? (urg === 2 ? '⏳ ' : '⏱ ') + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
-    if (G.id === 'duel' && !run.timed) left = '';
+    if (hasClock && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
+    var left = hasClock ? (urg === 2 ? '⏳ ' : '⏱ ') + clockStr(run.timeLeft) : '';
+    if (!run.timed && isFinite(run.left) && G.id !== 'duel') left += (left ? ' · ' : '') + G.unit + ' ' + run.left;
     $('#hudLeft').textContent = left;
-    if (run.timed) $('#tbar').firstChild.style.width = (100 * run.timeLeft / G.timedSecs) + '%';
+    if (hasClock) $('#tbar').firstChild.style.width = (100 * run.timeLeft / run.clockMax) + '%';
     var f = $('#meterFill');
     if (f) {
       f.style.width = Math.min(100, 100 * run.score / run.meterMax) + '%';

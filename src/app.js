@@ -64,7 +64,7 @@
 
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
-    $('.brand').textContent = save.set.name ? '🎲 ' + save.set.name + '\'s Dice Arcade' : '🎲 Dice Arcade';
+    $('.brand').textContent = save.set.name ? save.set.name + '\'s Dice Arcade' : 'Dice Arcade';
     var rk = Prog.rankOf(save.xp);
     $('#rankName').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank);
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
@@ -76,8 +76,8 @@
     ORDER.forEach(function (id) {
       var g = Games[id];
       var pct = Math.round(100 * Prog.totalStars(save, id) / (Prog.LEVELS * 3));
-      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
-        '</span><span class="st">Lv ' + topLevel(id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
+      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="wm">' + '⚀⚁⚂⚃⚄⚅'.charAt(ORDER.indexOf(id) % 6) + '</span><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
+        '</span><span class="st">LV ' + topLevel(id) + ' · ⭐ ' + Prog.totalStars(save, id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
     });
     $('#cards').innerHTML = h;
   }
@@ -176,32 +176,62 @@
       c.appendChild(e);
     });
     show('play'); fitCanvas(); updateHud();
-    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
+    $('#hudGoal').textContent = G.goal || '';
+    var first = !save.seen[id];
+    if (first) { save.seen[id] = 1; persist(); }
+    if (first || (!timed && level <= 10)) showIntro(first);
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+
+  /* Goal intro: an animated 3-step card shown 3 s before every run until level 10 (and the first time ever). Tap to skip. */
+  var introT = 0;
+  function goalLine() {
+    var h = '';
+    if (G.noMeter && !run.timed) h = G.starHelp(run.level);
+    else {
+      h = '🎯 Goal: <b>' + fmt(run.thr[0]) + '</b> points for ⭐';
+      if (isFinite(run.budget)) h += ' in <b>' + run.budget + '</b> ' + G.unit.toLowerCase();
+    }
+    if (run.timeLeft != null) h += ' · ⏱ <b>' + clockStr(run.clockMax) + '</b>';
+    return h;
+  }
+  function showIntro(long) {
+    paused = true;
+    var panels = (G.intro || []).map(function (p) { return '<div class="ip"><b>' + p[0] + '</b><small>' + p[1] + '</small></div>'; }).join('<span class="ia">▶</span>');
+    var secs = long ? 4 : 3;
+    modal('<div class="intro" id="intro"><h2>' + G.icon + ' ' + G.name + '</h2><div class="ipanels">' + panels + '</div><p class="goalp">' + goalLine() + '</p>' +
+      (long ? '<p class="sub"><i>' + G.howDe + '</i></p>' : '') + '<div class="skipbar"><i style="animation-duration:' + secs + 's"></i></div><div class="taphint">Tap to start</div></div>');
+    clearTimeout(introT);
+    var go = function () { if ($('#intro')) { closeModal(); paused = false; last = performance.now(); } };
+    introT = setTimeout(go, secs * 1000);
+    $('#intro').addEventListener('pointerdown', function () { clearTimeout(introT); go(); });
   }
 
   function buildMeter() {
     var m = $('#meter'), tb = $('#tbar');
-    tb.classList.toggle('hidden', !run.timed);
+    tb.classList.toggle('hidden', run.timeLeft == null);
     if (G.noMeter && !run.timed) { m.innerHTML = '<div style="font-size:12px;color:#9aa3c7;font-weight:700;padding-top:1px;white-space:normal;line-height:1.1;margin-top:-4px">' + G.starHelp(run.level) + '</div>'; m.style.background = 'none'; m.style.height = 'auto'; return; }
     m.style.background = ''; m.style.height = '';
     var max = run.thr[2] * 1.12, h = '<i id="meterFill"></i>';
     run.thr.forEach(function (t, k) { h += '<u data-k="' + k + '" style="left:' + (100 * t / max) + '%">' + (run.timed ? ['🥉', '🥈', '🥇'][k] : '⭐') + '</u>'; });
     m.innerHTML = h; run.meterMax = max;
   }
+  function clockStr(t) { t = Math.ceil(t); return t >= 100 ? Math.floor(t / 60) + ':' + ('0' + (t % 60)).slice(-2) : t + 's'; }
   function updateHud() {
     if (!run) return;
     var hs = $('#hudScore'), st = fmt(run.score);
-    if (hs.textContent !== st) { hs.textContent = st; if (save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
-    var urg = 0;
-    if (run.timed) { var fr = run.timeLeft / G.timedSecs; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
+    var gl = null; if (!(G.noMeter && !run.timed)) { gl = run.thr[2]; for (var q = 0; q < 3; q++) if (run.score < run.thr[q]) { gl = run.thr[q]; break; } }
+    var hh = st + (gl != null ? '<small>/ ' + fmt(gl) + '</small>' : '');
+    if (run.hs !== hh) { var grew = run.hs != null; run.hs = hh; hs.innerHTML = hh; if (grew && save.set.motion) { hs.classList.remove('bump'); void hs.offsetWidth; hs.classList.add('bump'); } }
+    var urg = 0, hasClock = run.timeLeft != null;
+    if (hasClock) { var fr = run.timeLeft / run.clockMax; urg = (run.timeLeft <= 10 || fr < 0.1) ? 2 : fr < 0.25 ? 1 : 0; }
     else if (G.id === 'rush' && run.game.lives === 1) urg = 1;
     if ($('#play').dataset.urg !== String(urg)) $('#play').dataset.urg = urg;
-    if (run.timed && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
-    var left = run.timed ? (urg === 2 ? '⏳ ' : '⏱ ') + Math.ceil(run.timeLeft) + 's' : (isFinite(run.left) ? G.unit + ' ' + run.left : '');
-    if (G.id === 'duel' && !run.timed) left = '';
+    if (hasClock && urg === 2 && Math.ceil(run.timeLeft) !== run.lastTick) { run.lastTick = Math.ceil(run.timeLeft); sfx('tick'); }
+    var left = hasClock ? (urg === 2 ? '⏳ ' : '⏱ ') + clockStr(run.timeLeft) : '';
+    if (!run.timed && isFinite(run.left) && G.id !== 'duel') left += (left ? ' · ' : '') + G.unit + ' ' + run.left;
     $('#hudLeft').textContent = left;
-    if (run.timed) $('#tbar').firstChild.style.width = (100 * run.timeLeft / G.timedSecs) + '%';
+    if (hasClock) $('#tbar').firstChild.style.width = (100 * run.timeLeft / run.clockMax) + '%';
     var f = $('#meterFill');
     if (f) {
       f.style.width = Math.min(100, 100 * run.score / run.meterMax) + '%';

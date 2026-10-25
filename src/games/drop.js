@@ -53,7 +53,8 @@
     this.env = env;
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     this.V = T ? 4 : Math.min(6, 3 + Math.floor((l - 1) / 6));
-    this.base = T ? 0.8 : Math.max(0.3, 0.92 - 0.0155 * l);
+    this.base0 = T ? 0.8 : Math.max(0.34, 0.92 - 0.015 * l);
+    this.base = this.base0;
     this.interval = this.base; this.timer = 0;
     this.pieces = T ? Infinity : env.budget;
     this.state = 'fall'; this.clr = null; this.chain = 0; this.hint = null; this.hintT = 0; this.botT = 0; this.plan = null;
@@ -138,7 +139,8 @@
   };
   Drop.prototype.update = function (dt) {
     this.hintT -= dt;
-    if (this.env.timed) this.base = Math.max(0.2, 0.8 - this.env.t * 0.0055);
+    if (this.env.timed) this.base = Math.max(0.16, 0.8 - this.env.t * 0.0075);
+    else this.base = Math.max(0.26, this.base0 * (1 - 0.25 * (1 - Math.max(0, this.pieces) / this.env.budget)));   // speeds up inside the level
     if (this.state === 'clear') {
       this.clr.t -= dt;
       if (this.clr.t <= 0) {
@@ -217,11 +219,6 @@
     c.beginPath(); c.moveTo(ox, dl); c.lineTo(ox + COLS * s, dl); c.stroke(); c.restore();
     var cur = this.cur;
     if (cur && this.state === 'fall') {
-      var gy = this.land(cur.cells, cur.x);
-      for (i = 0; i < cur.cells.length; i++) {
-        rr(c, ox + (cur.x + cur.cells[i][0]) * s + 3, oy + (gy + cur.cells[i][1]) * s + 3, s - 6, s - 6, s * 0.2);
-        c.strokeStyle = 'rgba(255,255,255,0.45)'; c.lineWidth = 2; c.stroke();
-      }
       for (i = 0; i < cur.cells.length; i++) drawDie(c, ox + (cur.x + cur.cells[i][0]) * s, oy + (cur.y + cur.cells[i][1]) * s, s, cur.cells[i][2], { stroke: '#fff' });
     }
     if (this.hint && this.hintT > 0) {
@@ -246,9 +243,12 @@
   Drop.prototype.btn = function (k) { if (k === 'l') this.move(-1); else if (k === 'r') this.move(1); else if (k === 'rot') this.rotate(); else if (k === 'drop') this.hard(); else if (k === 'hint') this.showHint(); };
 
   Games.drop = {
+    goal: "Match 3+ same dice to pop them",
+    intro: [["👆 ⟳ ⏬", "Move · turn · drop"], ["⚄ ⚄ ⚄", "3 same dice touch…"], ["💥", "…they pop! Chains score more"]],
     id: 'drop', name: 'Dice Drop', icon: '🎲', color: '#7c5cff', unit: 'Pieces',
     blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.', howDe: 'Ziehen = bewegen, Tippen = drehen, nach unten wischen = fallen lassen. 3 oder mehr gleiche Würfel zusammen verschwinden.',
-    par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); }, timedPar: 10.6, timedSecs: 90,
+    par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); },
+    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 10.6, timedSecs: 90,
     controls: [{ k: 'l', t: '◀' }, { k: 'rot', t: '⟳' }, { k: 'r', t: '▶' }, { k: 'drop', t: '⏬' }, { k: 'hint', t: '💡' }],
     create: function (env) { return new Drop(env); }
   };

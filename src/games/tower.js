@@ -6,7 +6,7 @@
     var l = env.level, T = env.timed;
     this.env = env;
     this.drops = T ? Infinity : env.budget;
-    this.speed0 = T ? 0.6 : Math.min(1.3, 0.4 + 0.022 * l);                  // screen widths per second
+    this.speed0 = T ? 0.6 : Math.min(1.55, 0.45 + 0.027 * l);                  // screen widths per second
     this.w0f = T ? 0.5 : Math.max(0.26, 0.58 - 0.0075 * l);
     this.win = T ? 0.03 : Math.max(0.014, 0.052 - 0.00085 * l);                // perfect window in seconds (tightens every level)
     this.blocks = []; this.debris = []; this.n = 0; this.streak = 0; this.phase = 0; this.dir = 1; this.botTarget = null; this.dropped = false;
@@ -20,7 +20,7 @@
   };
   Tower.prototype.top = function () { return this.blocks[this.blocks.length - 1]; };
   Tower.prototype.speed = function () {
-    var s = this.speed0 * (1 + 0.012 * Math.min(this.n, 40));
+    var s = this.speed0 * (1 + 0.02 * Math.min(this.n, 40));
     if (this.env.timed) s *= 1 + this.env.t * 0.004;
     return s * this.W;
   };
@@ -128,6 +128,8 @@
   Tower.prototype.pm = function () {}; Tower.prototype.pu = function () {}; Tower.prototype.btn = function (k) { if (k === 'drop') this.drop(); };
 
   Games.tower = {
+    goal: "Tap to drop the row · stack it straight",
+    intro: [["↔ ⚅⚅⚅", "The row swings left and right"], ["👆 TAP", "Tap to drop it on the tower"], ["🗼", "Line it up. Overhang is cut off"]],
     id: 'tower', name: 'Dice Tower', icon: '🗼', color: '#339af0', unit: 'Drops',
     blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.', howDe: 'Tippe, um den Würfel fallen zu lassen. Triff genau, dann bleibt er breit und du bekommst eine Serie.',
     par: 28, budget: function (l) { return 50 + 2 * l; }, timedPar: 11, timedSecs: 60,

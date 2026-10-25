@@ -18,24 +18,33 @@
     this.env = env;
     this.tier = T ? 0 : tierOf(l);
     this.rule = this.tier >= 4 ? Math.floor(env.rnd() * 4) : this.tier;
-    this.tt = T ? 3.6 : Math.max(1.8, 4.4 - 0.06 * l);        // seconds from top to the bins
+    this.tt = T ? 3.2 : Math.max(1.3, 4.0 - 0.07 * l);        // seconds from top to the bins
     this.items = []; this.spawnT = 0.4; this.spawned = 0; this.sorted = 0; this.streak = 0; this.lives = 3;
     this.total = T ? Infinity : env.budget;
+    this.shuffleBins(); this.sinceShuf = 0;
     this.freeze = 0; this.flash = null; this.press = -1; this.sinceRule = 0; this.ruleSecs = 0;
     env.setLeft(this.total);
   }
   Rush.prototype.R = function () { return RULES[this.rule]; };
   Rush.prototype.speedMul = function () {
-    if (this.env.timed) return Math.pow(0.987, this.env.t);
-    return Math.pow(0.965, Math.floor(this.sorted / 8));
+    if (this.env.timed) return Math.pow(0.982, this.env.t);
+    return Math.max(0.35, Math.pow(0.95, Math.floor(this.sorted / 5)));        // speeds up every 5 dice, even inside a level
+  };
+  /* Bin positions and colours are shuffled so neither place nor colour can be memorised. */
+  Rush.prototype.shuffleBins = function () {
+    var n = this.R().bins.length, rnd = this.env.rnd, i, j, t;
+    this.perm = []; for (i = 0; i < n; i++) this.perm.push(i);          // slot -> bin index
+    for (i = n - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); t = this.perm[i]; this.perm[i] = this.perm[j]; this.perm[j] = t; }
+    this.cols = BINCOL.slice(); for (i = this.cols.length - 1; i > 0; i--) { j = Math.floor(rnd() * (i + 1)); t = this.cols[i]; this.cols[i] = this.cols[j]; this.cols[j] = t; }
   };
   Rush.prototype.makeItem = function () {
     var R = this.R(), d = [];
     for (var i = 0; i < R.n; i++) d.push(1 + Math.floor(this.env.rnd() * 6));
-    return { d: d, y: 0, age: 0 };
+    var fc = Skin.cur.faces;
+    return { d: d, y: 0, age: 0, col: [fc[Math.floor(this.env.rnd() * 6)], fc[Math.floor(this.env.rnd() * 6)]] };   // die colour tells nothing about its value
   };
   Rush.prototype.setRule = function (r, msg) {
-    this.rule = r; this.freeze = 1.1; this.env.say(msg || 'New rule: ' + RULES[r].tip); this.env.sfx('combo');
+    this.rule = r; this.shuffleBins(); this.freeze = 1.1; this.env.say(msg || 'New rule: ' + RULES[r].tip); this.env.sfx('combo');
     // refresh dice already on the belt so they match the new rule's dice count
     this.items.forEach(function (it) { var n = RULES[r].n; while (it.d.length < n) it.d.push(1 + Math.floor(this.env.rnd() * 6)); it.d.length = n; }, this);
   };
@@ -66,6 +75,7 @@
     if (this.env.over) return;
     if (!this.env.timed) {
       if (this.sorted >= this.total) { this.env.finish({ done: true, lives: this.lives }); return; }
+      if ((this.env.level >= 3) && this.sorted % 10 === 0 && this.sorted < this.total && this.tier < 4) { this.shuffleBins(); this.env.say('Bins swapped!'); this.env.sfx('combo'); }
       if (this.tier >= 4 && this.sorted % 8 === 0 && this.sorted < this.total) {
         var r; do { r = Math.floor(this.env.rnd() * 4); } while (r === this.rule);
         this.setRule(r);
@@ -121,15 +131,15 @@
     var travel = this.binTop - this.ds * 0.9;
     for (i = this.items.length - 1; i >= 0; i--) {
       var it = this.items[i], y = it.y * travel;
-      if (it.d.length === 1) drawDie(c, this.cx - this.ds / 2, y, this.ds, it.d[0], { stroke: i === 0 ? '#fff' : null });
-      else { drawDie(c, this.cx - this.ds * 1.05, y, this.ds, it.d[0], { stroke: i === 0 ? '#fff' : null }); drawDie(c, this.cx + this.ds * 0.05, y, this.ds, it.d[1], { stroke: i === 0 ? '#fff' : null }); }
+      if (it.d.length === 1) drawDie(c, this.cx - this.ds / 2, y, this.ds, it.d[0], { color: it.col[0], stroke: i === 0 ? '#fff' : null });
+      else { drawDie(c, this.cx - this.ds * 1.05, y, this.ds, it.d[0], { color: it.col[0], stroke: i === 0 ? '#fff' : null }); drawDie(c, this.cx + this.ds * 0.05, y, this.ds, it.d[1], { color: it.col[1], stroke: i === 0 ? '#fff' : null }); }
     }
     c.restore();
     var bw = this.laneW / nb;
     for (i = 0; i < nb; i++) {
-      var x = this.lx + i * bw, pr = this.press === i;
-      rr(c, x + 4, this.binTop, bw - 8, this.binH, 16); c.fillStyle = pr ? '#fff' : BINCOL[i]; c.fill();
-      text(c, R.bins[i], x + bw / 2, this.binTop + this.binH / 2, Math.min(bw * 0.24, this.binH * 0.32, 42), pr ? '#222' : '#10203a');
+      var x = this.lx + i * bw, bi = this.perm[i], pr = this.press === bi;
+      rr(c, x + 4, this.binTop, bw - 8, this.binH, 16); c.fillStyle = pr ? '#fff' : this.cols[i]; c.fill();
+      text(c, R.bins[bi], x + bw / 2, this.binTop + this.binH / 2, Math.min(bw * 0.24, this.binH * 0.32, 42), pr ? '#222' : '#10203a');
     }
     for (i = 0; i < Math.max(3, this.lives); i++) text(c, i < this.lives ? '❤️' : '🖤', this.lx + 18 + i * 26, 26, 20);
     var mult = 1 + Math.min(3, Math.floor(this.streak / 5));
@@ -141,11 +151,13 @@
   Rush.prototype.pd = function (x, y) {
     if (y < this.binTop - 10) return;
     var nb = this.R().bins.length, i = Math.floor((x - this.lx) / (this.laneW / nb));
-    if (i >= 0 && i < nb) this.sort(i);
+    if (i >= 0 && i < nb) this.sort(this.perm[i]);
   };
   Rush.prototype.pm = function () {}; Rush.prototype.pu = function () {}; Rush.prototype.btn = function () {};
 
   Games.rush = {
+    goal: "Tap the bin that fits the front die",
+    intro: [["⚃ ?", "Look at the front die"], ["EVEN │ ODD", "Tap the matching bin"], ["🔀", "Bins and colours get mixed up!"]],
     id: 'rush', name: 'Dice Rush', icon: '⚡', color: '#fab005', unit: 'Dice',
     blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!', howDe: 'Tippe den Behälter, der zum vordersten Würfel passt. Serien geben mehr Punkte. Nur 3 Herzen!',
     par: 41, budget: function (l) { return 50 + Math.floor(l * 1.6); }, timedPar: 35, timedSecs: 60,

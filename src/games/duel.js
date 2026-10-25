@@ -2,7 +2,7 @@
 /* Dice Duel: you vs the computer on a 5x5 board. Roll, then place your die. A bigger die flips the smaller
    enemy dice next to it. When the board is full the bigger pip total wins the round. Best of 3. */
 (function () {
-  var N = 5, ME = 1, CPU = 2, COLOR = { 1: '#4dabf7', 2: '#ff8787' };
+  var BOT = 'Bolt', N = 5, ME = 1, CPU = 2, COLOR = { 1: '#4dabf7', 2: '#ff8787' };
   var D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
 
   function sums(b) {
@@ -59,6 +59,8 @@
     this.look = !T && l >= 32;
     this.hand = T ? 0 : Math.min(4, Math.floor(l / 10));
     this.cpuMaxF = T ? 5 : Math.min(6, 3 + l / 10);      // early CPU rolls smaller dice
+    this.turnSecs = T ? 8 : Math.max(4, 12 - 0.2 * Math.min(l, 40));        // time to place your die
+    this.tt = this.turnSecs;
     this.wins = [0, 0, 0]; this.margin = 0; this.round = 0; this.score = 0; this.flip = {}; this.hov = null; this.hint = null; this.hintT = 0;
     this.startRound();
   }
@@ -74,7 +76,7 @@
   };
   Duel.prototype.roll = function () { var mx = 6;
     if (this.turn === CPU) { mx = Math.min(6, Math.floor(this.cpuMaxF) + (this.env.rnd() < this.cpuMaxF % 1 ? 1 : 0)); }
-    this.die = 1 + this.rand(mx); };
+    this.die = 1 + this.rand(mx); this.tt = this.turnSecs; };
   Duel.prototype.play = function (i, who) {
     if (this.state !== 'play' || this.turn !== who || this.b[i].o) return false;
     var fl = place(this.b, i, who, this.die), s = this.cell;
@@ -95,7 +97,7 @@
     else { pts = 20; }
     if (pts) this.env.addScore(pts, this.W / 2, this.oy + this.cell * 2.5, '#ffd43b');
     this.env.sfx(won ? 'win' : 'bad');
-    this.banner = { text: won ? 'You win the round!' : tie ? 'Draw!' : 'CPU wins the round', me: me, cpu: cpu, t: 1.7 };
+    this.banner = { text: won ? 'You win the round!' : tie ? 'Draw!' : BOT + ' wins the round', me: me, cpu: cpu, t: 1.7 };
     this.state = 'between';
   };
   Duel.prototype.afterRound = function () {
@@ -111,6 +113,13 @@
     if (this.state === 'between') { this.banner.t -= dt; if (this.banner.t <= 0) this.afterRound(); return; }
     if (this.state !== 'play') return;
     if (this.wait > 0) { this.wait -= dt; return; }
+    if (this.turn === ME) {
+      this.tt -= dt;
+      if (this.tt <= 0) {                                      // out of time: a random square is played for you
+        var em = empties(this.b); this.env.say('Too slow!'); this.env.mistake();
+        if (em.length) this.play(em[this.rand(em.length)], ME);
+      }
+    }
     if (this.turn === CPU) {
       var i = choose(this.b, CPU, this.die, this.eps, this.look, this.env.rnd);
       if (i >= 0) this.play(i, CPU);
@@ -169,25 +178,30 @@
         rr(c, bx, cy - 26, pw * 0.38, 6, 3); c.fillStyle = COLOR[who]; c.globalAlpha = this.turn === who ? pul : 0.18; c.fill(); c.globalAlpha = 1;
       }, this);
     }
+    // pip race bar: who is ahead right now
+    var tot = Math.max(1, sm[ME] + sm[CPU]), bx0 = px + pw * 0.04, bww = pw * 0.92, byy = cy + 18;
+    rr(c, bx0, byy, bww, 7, 3); c.fillStyle = 'rgba(255,255,255,0.1)'; c.fill();
+    rr(c, bx0, byy, Math.max(4, bww * sm[ME] / tot), 7, 3); c.fillStyle = COLOR[ME]; c.fill();
+    if (sm[CPU]) { rr(c, bx0 + bww * sm[ME] / tot + 1, byy, Math.max(4, bww * sm[CPU] / tot - 1), 7, 3); c.fillStyle = COLOR[CPU]; c.fill(); }
     text(c, '● You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
-    text(c, '◆ CPU ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
+    text(c, '◆ ' + BOT + ' ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
     if (!this.env.timed) {
       var wr = '', k; for (k = 0; k < 2; k++) wr += (k < this.wins[ME] ? '🏆' : '▫️') + ' ';
-      text(c, wr, px + pw * 0.25, cy + 34, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
-      text(c, wc, px + pw * 0.75, cy + 34, 20);
-      text(c, 'Round ' + Math.min(this.round, 3), px + pw * 0.5, cy + 34, 14, '#99a');
-    } else text(c, 'Round ' + this.round + ' · wins ' + this.wins[ME], px + pw * 0.5, cy + 34, 14, '#99a');
-    var dy = cy + 34 + Math.min(70, s * 1.0);
+      text(c, wr, px + pw * 0.25, cy + 40, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
+      text(c, wc, px + pw * 0.75, cy + 40, 20);
+      text(c, 'Round ' + Math.min(this.round, 3), px + pw * 0.5, cy + 40, 14, '#99a');
+    } else text(c, 'Round ' + this.round + ' · wins ' + this.wins[ME], px + pw * 0.5, cy + 40, 14, '#99a');
+    var dy = cy + 40 + Math.min(70, s * 1.0);
     var ds = Math.min(s * 1.0, 70);
     if (this.state === 'play') {
       var mine = this.turn === ME;
-      text(c, mine ? 'Your die - tap a square' : 'CPU is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? '#fff' : '#99a', 'center', '600');
+      text(c, mine ? 'Your die - tap a square (' + Math.max(0, Math.ceil(this.tt)) + 's)' : BOT + ' is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? (this.tt < 3 ? '#ff8787' : '#fff') : '#99a', 'center', '600');
       drawDie(c, px + pw / 2 - ds / 2, dy - ds * 0.55, ds, this.die, { color: COLOR[this.turn], stroke: '#fff' });
     }
     if (this.banner) {
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox, oy + bw * 0.34, bw, bw * 0.32);
       text(c, this.banner.text, ox + bw / 2, oy + bw * 0.46, Math.min(28, s * 0.55), '#ffd43b');
-      text(c, 'You ' + this.banner.me + '  -  CPU ' + this.banner.cpu, ox + bw / 2, oy + bw * 0.57, Math.min(22, s * 0.42), '#fff');
+      text(c, 'You ' + this.banner.me + '  -  ' + BOT + ' ' + this.banner.cpu, ox + bw / 2, oy + bw * 0.57, Math.min(22, s * 0.42), '#fff');
     }
   };
   Duel.prototype.cellAt = function (x, y) {
@@ -200,8 +214,10 @@
   Duel.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.duel = {
+    goal: "A bigger die flips smaller enemy dice",
+    intro: [["🔵⚅  🔴⚂", "Place your die on a free square"], ["⚅ ▶ ⚂", "A bigger die flips smaller enemy dice next to it"], ["🏆 🏆", "Most pips when full wins the round. Win 2!"]],
     id: 'duel', name: 'Dice Duel', icon: '⚔️', color: '#e64980', unit: 'Rounds', noMeter: true,
-    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
+    blurb: 'Beat Bolt the robot, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
     par: 1, budget: function () { return 3; }, timedPar: 3.8, timedSecs: 120,
     thresholds: function () { return [1, 2, 3]; },
     stars: function (l, r) {

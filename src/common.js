@@ -13,6 +13,8 @@ function mulberry(a) {
 /* Bot pacing so test bots play at a human speed (think = seconds per decision). */
 function botReady(g, dt) { g.botWait = (g.botWait || 0) - dt; return g.botWait <= 0; }
 function botDone(g) { var t = g.env.skill.think || 0; g.botWait = t * (0.7 + g.env.rnd() * 0.6); }
+/* Seconds a level clock allows per move: generous early, tighter later (never below 3.6 s). */
+function perMoveSecs(l) { return l <= 40 ? 8 - 0.1 * l : Math.max(3.6, 4 - 0.04 * (l - 40)); }
 function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 function rr(c, x, y, w, h, r) {
   c.beginPath(); c.moveTo(x + r, y);
@@ -78,7 +80,8 @@ function Run(G, level, timed, seed, ui, skill) {
   this.W = 360; this.H = 560;
   this.budget = this.timed ? Infinity : G.budget(level);
   this.left = this.budget;
-  this.timeLeft = this.timed ? G.timedSecs : null;
+  this.clockMax = this.timed ? G.timedSecs : (G.levelTime ? G.levelTime(level) : null);   // every level has a clock when the game defines levelTime
+  this.timeLeft = this.clockMax;
   this.thr = this.timed ? Prog.timedThr(G) : Prog.thresholds(G, level);
   this.game = G.create(this);
   this.game.resize(this.W, this.H);
@@ -109,7 +112,7 @@ Run.prototype.step = function (dt) {
   if (this.over) return;
   this.t += dt;
   this.game.update(dt);
-  if (this.timed && !this.over) {
+  if (this.timeLeft != null && !this.over) {
     this.timeLeft -= dt;
     if (this.timeLeft <= 0) { this.timeLeft = 0; this.finish({ timeUp: true }); }
   }
