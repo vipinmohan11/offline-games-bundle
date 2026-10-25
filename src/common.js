@@ -37,6 +37,24 @@ var SKINS = [
   { name: 'Gold',    price: 1800, faces: ['#ffd700', '#ffb703', '#fb8500', '#f4a261', '#e9c46a', '#ffe8a3'], pip: '#4a3000', bg: '#3a2a10' },
   { name: 'Galaxy',  price: 2400, faces: ['#7b2cbf', '#3c096c', '#5a189a', '#9d4edd', '#c77dff', '#e0aaff'], pip: '#ffffff', bg: '#10002b' }
 ];
+var BOARDS = [
+  { name: 'Classic', price: 0,   bg: null },
+  { name: 'Wood',    price: 250, bg: '#6b4423', pat: 'lines' },
+  { name: 'Space',   price: 400, bg: '#0b1030', pat: 'stars' },
+  { name: 'Paper',   price: 300, bg: '#cfc4a8', pat: 'grid' },
+  { name: 'Mint',    price: 350, bg: '#1d5c4e', pat: 'dots' }
+];
+var Board = { i: 0, cur: BOARDS[0] };
+function setBoard(i) { Board.i = i; Board.cur = BOARDS[i] || BOARDS[0]; }
+/* Power-ups: used from the play screen, once per run each. */
+var POWERUPS = [
+  { id: 'time', icon: '⏱', name: '+15 seconds', short: '+15s', price: 60, desc: 'Adds 15 seconds to the clock (games with a clock).' },
+  { id: 'x2',   icon: '✖2', name: 'Double points', short: '×2', price: 80, desc: 'Every point counts double for 20 seconds.' },
+  { id: 'slow', icon: '🐢', name: 'Slow motion', short: 'Slow', price: 70, desc: 'Everything moves 40% slower for 20 seconds.' }
+];
+var AVATARS = ['🦊', '🐼', '🐯', '🦁', '🐸', '🐙', '🦄', '🐲', '🚀', '👾', '🤖', '🎩'];
+var AVATAR_PRICE = 100;
+var TITLES = [{ t: 'Rookie', price: 0 }, { t: 'Dice Whiz', price: 150 }, { t: 'Lucky Roller', price: 200 }, { t: 'Board Boss', price: 300 }, { t: 'Combo King', price: 400 }, { t: 'Legend', price: 800 }];
 var Skin = { i: 0, cur: SKINS[0] };
 function setSkin(i) { Skin.i = i; Skin.cur = SKINS[i] || SKINS[0]; }
 
@@ -67,7 +85,19 @@ function text(c, str, x, y, size, color, align, weight) {
 }
 function boardBg(c, x, y, w, h) {
   rr(c, x - 6, y - 6, w + 12, h + 12, 14); c.fillStyle = 'rgba(0,0,0,0.28)'; c.fill();
-  rr(c, x, y, w, h, 10); c.fillStyle = Skin.cur.bg; c.fill();
+  boardFill(c, x, y, w, h, 10);
+}
+/* Board look: colour plus a quiet pattern chosen in the shop. */
+function boardFill(c, x, y, w, h, r) {
+  var B = Board.cur;
+  rr(c, x, y, w, h, r); c.fillStyle = B.bg || Skin.cur.bg; c.fill();
+  if (!B.pat) return;
+  c.save(); rr(c, x, y, w, h, r); c.clip(); var i;
+  if (B.pat === 'lines') { c.fillStyle = 'rgba(0,0,0,0.16)'; for (i = 0; i < h; i += 16) c.fillRect(x, y + i, w, 2); }
+  else if (B.pat === 'grid') { c.fillStyle = 'rgba(0,0,0,0.10)'; for (i = 0; i < w; i += 20) c.fillRect(x + i, y, 1, h); for (i = 0; i < h; i += 20) c.fillRect(x, y + i, w, 1); }
+  else if (B.pat === 'dots') { c.fillStyle = 'rgba(255,255,255,0.08)'; for (i = 0; i < w; i += 18) for (var j = 0; j < h; j += 18) c.fillRect(x + i + 8, y + j + 8, 3, 3); }
+  else if (B.pat === 'stars') { c.fillStyle = 'rgba(255,255,255,0.55)'; for (i = 0; i < 40; i++) c.fillRect(x + ((i * 97) % 101) / 101 * w, y + ((i * 53) % 103) / 103 * h, i % 5 ? 1.5 : 2.5, i % 5 ? 1.5 : 2.5); }
+  c.restore();
 }
 
 /* Run: one play session of one game (level or timed). Works headless (ui = null). */
@@ -77,6 +107,7 @@ function Run(G, level, timed, seed, ui, skill) {
   this.skill = skill || { eps: 0, tempo: 0.15, noise: 1 };
   this.score = 0; this.t = 0; this.over = false; this.result = null;
   this.mistakes = 0; this.acts = 0; this.run = 0; this.bestRun = 0; this.helper = false;
+  this.mult = 1; this.multT = 0; this.slowT = 0; this.pu = {};
   this.W = 360; this.H = 560;
   this.budget = this.timed ? Infinity : G.budget(level);
   this.left = this.budget;
@@ -88,7 +119,7 @@ function Run(G, level, timed, seed, ui, skill) {
 }
 Run.prototype.resize = function (w, h) { this.W = w; this.H = h; this.game.resize(w, h); };
 Run.prototype.addScore = function (n, x, y, color) {
-  n = Math.round(n); if (n <= 0) return;
+  n = Math.round(n * this.mult); if (n <= 0) return;
   this.score += n; this.acts++; if (++this.run > this.bestRun) this.bestRun = this.run;
   if (this.ui) this.ui.fx(x, y, '+' + n, color);
 };
@@ -108,10 +139,21 @@ Run.prototype.finish = function (info) {
   this.result = { score: this.score, stars: stars, info: info, mistakes: this.mistakes, style: style,
     perfect: !this.timed && stars === 3 && this.mistakes === 0 && style >= 90 && !this.helper };
 };
+/* Power-ups: once per run each. Returns true if it took effect. */
+Run.prototype.usePower = function (id) {
+  if (this.over || this.pu[id]) return false;
+  if (id === 'time') { if (this.timeLeft == null) return false; this.timeLeft += 15; this.clockMax += 15; }
+  else if (id === 'x2') { this.mult = 2; this.multT = 20; }
+  else if (id === 'slow') { this.slowT = 20; }
+  else return false;
+  this.pu[id] = true; this.helper = true; return true;
+};
 Run.prototype.step = function (dt) {
   if (this.over) return;
   this.t += dt;
-  this.game.update(dt);
+  if (this.multT > 0) { this.multT -= dt; if (this.multT <= 0) this.mult = 1; }
+  var gdt = dt; if (this.slowT > 0) { this.slowT -= dt; gdt = dt * 0.6; }
+  this.game.update(gdt);
   if (this.timeLeft != null && !this.over) {
     this.timeLeft -= dt;
     if (this.timeLeft <= 0) { this.timeLeft = 0; this.finish({ timeUp: true }); }

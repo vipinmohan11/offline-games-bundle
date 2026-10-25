@@ -10,10 +10,10 @@
     this.nv = T ? 4 : Math.min(6, 3 + Math.floor(l / 9));
     this.rows0 = T ? 4 : Math.min(8, 3 + Math.floor(l / 6));
     this.K = T ? 5 : Math.max(3, 7 - Math.floor(l / 8));        // misses before the ceiling drops
-    this.shots = T ? Infinity : env.budget;
+    this.shots = Infinity;                       // no shot limit: the 2-minute clock ends the level
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     for (r = 0; r < this.rows0; r++) for (var c = 0; c < COLS; c++) if (env.rnd() < 0.92) this.g[r][c] = 1 + Math.floor(env.rnd() * this.nv);
-    this.rowEvery = T ? 12 : Math.max(10, 20 - 0.25 * Math.min(l, 40));      // seconds between new rows
+    this.rowEvery = T ? 12 : Math.max(12, 22 - 0.25 * Math.min(l, 40));      // seconds between new rows
     this.rowT = this.rowEvery;
     this.miss = 0; this.proj = null; this.aim = null; this.falling = []; this.angle = Math.PI / 2; this.cool = 0; this.botT = 0;
     this.cur = this.pick(); this.next = this.pick();
@@ -121,13 +121,11 @@
     // wall cleared?
     var any = false; for (var r = 0; r < ROWS && !any; r++) for (var c = 0; c < COLS; c++) if (this.g[r][c]) { any = true; break; }
     if (!any) {
-      var bonus = 150 + (this.shots === Infinity ? 0 : this.shots * 20);
+      var bonus = 150;
       this.env.addScore(bonus, this.W / 2, this.H / 3, '#ffd43b'); this.env.say('Wall cleared!'); this.env.sfx('win');
-      if (this.env.timed) { for (var rr_ = 0; rr_ < 3; rr_++) for (var cc = 0; cc < COLS; cc++) this.g[rr_][cc] = 1 + Math.floor(this.env.rnd() * this.nv); }
-      else { this.env.finish({ cleared: true }); return; }
+      for (var rr_ = 0; rr_ < 3; rr_++) for (var cc = 0; cc < COLS; cc++) this.g[rr_][cc] = 1 + Math.floor(this.env.rnd() * this.nv);   // wall refills, keep going
     }
     for (var c3 = 0; c3 < COLS; c3++) for (var r3 = DANGER; r3 < ROWS; r3++) if (this.g[r3][c3]) { this.env.finish({ overrun: true }); return; }
-    if (!this.env.timed && this.shots <= 0) this.env.finish({ done: true });
   };
   Shot.prototype.pushRow = function () {
     for (var r = ROWS - 1; r > 0; r--) this.g[r] = this.g[r - 1];
@@ -177,7 +175,7 @@
   Shot.prototype.draw = function (c) {
     var s = this.cell, ox = this.ox, oy = this.oy, r, cc, i;
     rr(c, ox - 4, oy - 4, s * COLS + 8, s * ROWS + 8, 12); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fill();
-    rr(c, ox, oy, s * COLS, s * ROWS, 8); c.fillStyle = Skin.cur.bg; c.fill();
+    boardFill(c, ox, oy, s * COLS, s * ROWS, 8);
     c.fillStyle = 'rgba(255,107,107,0.18)'; c.fillRect(ox, oy + DANGER * s, s * COLS, s * (ROWS - DANGER));
     c.setLineDash([6, 6]); c.strokeStyle = 'rgba(255,107,107,0.7)'; c.lineWidth = 2; c.beginPath(); c.moveTo(ox, oy + DANGER * s); c.lineTo(ox + s * COLS, oy + DANGER * s); c.stroke(); c.setLineDash([]);
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) if (this.g[r][cc]) drawDie(c, ox + cc * s, oy + r * s, s, this.g[r][cc]);
@@ -215,12 +213,13 @@
   Shot.prototype.btn = function (k) { if (k === 'swap') { var t = this.cur; this.cur = this.next; this.next = t; this.env.sfx('tick'); } };
 
   Games.shot = {
+    lose: 'the wall crosses the red line',
     goal: "Same number or sum 7 pops · new rows come!",
     intro: [["🎯 👆", "Drag to aim, let go to fire"], ["⚂ + ⚃ = 7", "Same number, or two that add to 7, pop"], ["⬇ ⬇", "New rows arrive on a timer!"]],
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
     blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
-    par: 38, budget: function (l) { return 22 + Math.floor(l / 2); },
-    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 9, timedSecs: 90,
+    par: 38, budget: function (l) { return 44 + Math.floor(l / 2); },       // shots a steady player gets in 2 minutes (sets the goals)
+    levelTime: function () { return 120; }, fixedClock: true, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }
   };

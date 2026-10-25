@@ -56,7 +56,7 @@
     this.base0 = T ? 0.8 : Math.max(0.34, 0.92 - 0.015 * l);
     this.base = this.base0;
     this.interval = this.base; this.timer = 0;
-    this.pieces = T ? Infinity : env.budget;
+    this.pieces = Infinity;                     // pieces never run out: the 2-minute clock ends the level
     this.state = 'fall'; this.clr = null; this.chain = 0; this.hint = null; this.hintT = 0; this.botT = 0; this.plan = null;
     this.prefill(T ? 0 : Math.min(4, Math.floor(l / 8)));
     this.next = this.makePiece();
@@ -140,7 +140,7 @@
   Drop.prototype.update = function (dt) {
     this.hintT -= dt;
     if (this.env.timed) this.base = Math.max(0.16, 0.8 - this.env.t * 0.0075);
-    else this.base = Math.max(0.26, this.base0 * (1 - 0.25 * (1 - Math.max(0, this.pieces) / this.env.budget)));   // speeds up inside the level
+    else this.base = Math.max(0.26, this.base0 * (1 - 0.25 * Math.min(1, this.env.t / 120)));   // speeds up inside the level
     if (this.state === 'clear') {
       this.clr.t -= dt;
       if (this.clr.t <= 0) {
@@ -243,12 +243,13 @@
   Drop.prototype.btn = function (k) { if (k === 'l') this.move(-1); else if (k === 'r') this.move(1); else if (k === 'rot') this.rotate(); else if (k === 'drop') this.hard(); else if (k === 'hint') this.showHint(); };
 
   Games.drop = {
+    lose: 'the stack reaches the top',
     goal: "Match 3+ same dice to pop them",
     intro: [["👆 ⟳ ⏬", "Move · turn · drop"], ["⚄ ⚄ ⚄", "3 same dice touch…"], ["💥", "…they pop! Chains score more"]],
     id: 'drop', name: 'Dice Drop', icon: '🎲', color: '#7c5cff', unit: 'Pieces',
     blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.', howDe: 'Ziehen = bewegen, Tippen = drehen, nach unten wischen = fallen lassen. 3 oder mehr gleiche Würfel zusammen verschwinden.',
-    par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); },
-    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); }, timedPar: 10.6, timedSecs: 90,
+    par: 26, budget: function (l) { return 56 + Math.floor(l * 0.8); },       // pieces a steady player places in 2 minutes (sets the goals)
+    levelTime: function () { return 120; }, fixedClock: true, timedPar: 10.6, timedSecs: 90,
     controls: [{ k: 'l', t: '◀' }, { k: 'rot', t: '⟳' }, { k: 'r', t: '▶' }, { k: 'drop', t: '⏬' }, { k: 'hint', t: '💡' }],
     create: function (env) { return new Drop(env); }
   };

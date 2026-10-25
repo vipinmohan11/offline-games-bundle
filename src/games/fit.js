@@ -100,6 +100,8 @@
       for (var k in res.kill) this.env.burst(ox + ((k % N) + 0.5) * s, oy + (Math.floor(k / N) + 0.5) * s, '#ffd43b', 2);
     }
     this.hint = null;
+    var freeN = 0; for (var fy = 0; fy < N; fy++) for (var fx = 0; fx < N; fx++) if (!this.g[fy][fx]) freeN++;
+    if (freeN <= 14 && !this.warned) { this.warned = true; this.env.say('⚠ Board almost full!'); this.env.sfx('bad'); } else if (freeN > 20) this.warned = false;
     this.env.setLeft(this.env.budget - this.placed);
     if (!this.env.timed && this.placed >= this.env.budget) { this.env.finish({ done: true }); return true; }
     if (this.tray.some(function (q, k) { return q && fitBefore[k] && !this.pieceFits(q); }, this)) this.env.mistake();   // blocked a waiting shape
@@ -231,6 +233,7 @@
   Fit.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.fit = {
+    lose: 'none of your 3 shapes fits any more',
     goal: "Fill a full row or column to clear it",
     intro: [["🧩", "Drag a shape onto the board"], ["▦▦▦▦▦▦▦▦", "Fill a whole row or column"], ["💥", "The line clears and scores"]],
     id: 'fit', name: 'Dice Fit', icon: '🧩', color: '#12b886', unit: 'Moves',

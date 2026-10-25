@@ -156,6 +156,7 @@
   Rush.prototype.pm = function () {}; Rush.prototype.pu = function () {}; Rush.prototype.btn = function () {};
 
   Games.rush = {
+    lose: 'you lose all 3 hearts',
     goal: "Tap the bin that fits the front die",
     intro: [["⚃ ?", "Look at the front die"], ["EVEN │ ODD", "Tap the matching bin"], ["🔀", "Bins and colours get mixed up!"]],
     id: 'rush', name: 'Dice Rush', icon: '⚡', color: '#fab005', unit: 'Dice',

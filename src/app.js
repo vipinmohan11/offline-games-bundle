@@ -8,7 +8,7 @@
     '⚽', '🏀', '🚀', '🛸', '🚂', '🚁', '⛵', '🎈', '🌈', '⭐', '🌙', '☀️', '🎸', '🥁', '🎨', '🏆'];
   var RANKS = ['Rookie Roller', 'Dice Cadet', 'Pip Pilot', 'Lucky Roller', 'Dice Knight', 'Dice Wizard', 'Dice Master', 'Dice Legend'];
   var KEY = 'diceArcade.v1';
-  var VERSION = '2.0', BUILD = '__BUILD__';
+  var VERSION = '2.1', BUILD = '__BUILD__';
   var DEF_SET = { vol: 0.8, vibe: true, motion: true, hints: true, text: 1, theme: 'night', big: false, lefty: false, name: '' };
   var $ = function (s) { return document.querySelector(s); };
   var save, run = null, G = null, curGame = null, paused = false, last = 0, raf = 0, overT = 0;
@@ -64,22 +64,34 @@
 
   function renderHome() {
     $('#coins').textContent = '🪙 ' + fmt(save.coins);
-    $('.brand').textContent = save.set.name ? save.set.name + '\'s Dice Arcade' : 'Dice Arcade';
+    $('#pAv').textContent = save.avatar || '🎲';
+    $('#pName').textContent = (save.set.name || 'Player') + ' · ' + TITLES[save.title || 0].t;
     var rk = Prog.rankOf(save.xp);
-    $('#rankName').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank);
-    $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
+    $('#rankLine').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank) + ' · ' + rk.into + ' / ' + rk.need + ' XP';
     $('#rankBar').style.width = (100 * rk.into / rk.need) + '%';
-    $('#gift').classList.toggle('rdy', Prog.giftReady(save, today()));
+    var rdy = Prog.giftReady(save, today());
+    $('#gift').classList.toggle('rdy', rdy);
+    $('#gift').querySelector('small').textContent = rdy ? 'Claim' : 'Gift';
     $('#navAlbum').classList.toggle('dot', save.stickers.length > (save.seenStk || 0));
     $('#navSound').firstChild.textContent = save.sound ? '🔊' : '🔇';
     var h = '';
     ORDER.forEach(function (id) {
       var g = Games[id];
       var pct = Math.round(100 * Prog.totalStars(save, id) / (Prog.LEVELS * 3));
-      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="wm">' + '⚀⚁⚂⚃⚄⚅'.charAt(ORDER.indexOf(id) % 6) + '</span><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
-        '</span><span class="st">LV ' + topLevel(id) + ' · ⭐ ' + Prog.totalStars(save, id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
+      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="ic">' + g.icon + '</span>' +
+        '<span class="tx"><b class="nm">' + g.name + '</b><small>' + g.blurb + '</small><span class="sbar"><i style="width:' + pct + '%"></i></span></span>' +
+        '<span class="meta"><b>Level ' + topLevel(id) + '</b><small>⭐ ' + Prog.totalStars(save, id) + '</small></span><span class="go">›</span></button>';
     });
     $('#cards').innerHTML = h;
+    checkBonus();
+  }
+  /* Sticker collection bonus: every 8 stickers pays a reward. */
+  function checkBonus() {
+    var r = Prog.stickerBonus(save); if (!r.length) return;
+    persist();
+    var txt = r.map(function (x) { return (x.coins ? '+' + x.coins + ' 🪙 ' : '') + (x.pu ? '+' + x.n + ' ' + POWERUPS.filter(function (p) { return p.id === x.pu; })[0].name : ''); }).join('<br>');
+    modal('<h2>🎁 Collection reward!</h2><div class="sub">You collected ' + save.stickers.length + ' stickers.</div><div class="big" style="font-size:26px">' + txt + '</div><div class="btns"><button class="pri" id="mClose">Nice!</button></div>');
+    sfx('win');
   }
 
   function openGame(id) {
@@ -119,14 +131,39 @@
   }
 
   function renderAlbum() {
+    checkBonus();
     $('#alCoins').textContent = '🪙 ' + fmt(save.coins);
-    var h = '';
+    var h = '<h3>Power-ups</h3><p class="note">Use them while you play: tap the button under the score. Each one works once per game. Not in Star Challenges.</p><div class="pus">';
+    POWERUPS.forEach(function (p) {
+      h += '<div class="pu"><span class="pi">' + p.icon + '</span><div class="pt"><b>' + p.name + '</b><small>' + p.desc + '</small></div><div class="pr"><small>You have ' + (save.inv[p.id] || 0) + '</small><button data-pu="' + p.id + '" class="pri' + (save.coins < p.price ? ' poor' : '') + '">🪙 ' + p.price + '</button></div></div>';
+    });
+    h += '</div><h3>Dice skins</h3><div class="skins">';
     SKINS.forEach(function (s, i) {
       var own = save.skins.indexOf(i) >= 0;
       h += '<div class="skin' + (save.skin === i ? ' sel' : '') + '"><b>' + s.name + '</b><div class="sw">' + s.faces.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join('') + '</div>' +
         '<button data-skin="' + i + '" class="' + (own ? '' : 'pri') + (!own && save.coins < s.price ? ' poor' : '') + '">' + (save.skin === i ? '✔ In use' : own ? 'Use' : '🪙 ' + s.price) + '</button></div>';
     });
-    $('#skins').innerHTML = h;
+    h += '</div><h3>Board looks</h3><p class="note">The background of the play board in most games.</p><div class="skins">';
+    BOARDS.forEach(function (bd, i) {
+      var own = save.boards.indexOf(i) >= 0;
+      h += '<div class="skin' + (save.board === i ? ' sel' : '') + '"><b>' + bd.name + '</b><div class="bsw" style="background:' + (bd.bg || Skin.cur.bg) + '"></div>' +
+        '<button data-board="' + i + '" class="' + (own ? '' : 'pri') + (!own && save.coins < bd.price ? ' poor' : '') + '">' + (save.board === i ? '✔ In use' : own ? 'Use' : '🪙 ' + bd.price) + '</button></div>';
+    });
+    h += '</div><h3>Avatars</h3><p class="note">Shown on the start page next to your name.</p><div class="avs">';
+    AVATARS.forEach(function (a, i) {
+      var own = save.avatars.indexOf(a) >= 0;
+      h += '<button class="av' + (save.avatar === a ? ' sel' : '') + (own ? '' : ' lockd') + '" data-avatar="' + a + '"><span>' + a + '</span><small>' + (save.avatar === a ? 'In use' : own ? 'Use' : '🪙 ' + AVATAR_PRICE) + '</small></button>';
+    });
+    h += '</div><h3>Titles</h3><div class="tls">';
+    TITLES.forEach(function (t, i) {
+      var own = save.titles.indexOf(i) >= 0;
+      h += '<button class="tl' + (save.title === i ? ' sel' : '') + '" data-title="' + i + '"><b>' + t.t + '</b><small>' + (save.title === i ? 'In use' : own ? 'Use' : '🪙 ' + t.price) + '</small></button>';
+    });
+    h += '</div>';
+    $('#shop').innerHTML = h;
+    var nxt = Math.min(Prog.STK_REWARDS.length, save.stkClaimed + 1) * Prog.STK_STEP, rw = Prog.STK_REWARDS[Math.min(save.stkClaimed, Prog.STK_REWARDS.length - 1)];
+    $('#stkNote').textContent = save.stkClaimed >= Prog.STK_REWARDS.length ? 'All collection rewards claimed. Great job!' :
+      'Collection reward at ' + nxt + ' stickers: ' + (rw.coins ? '+' + rw.coins + ' 🪙 ' : '') + (rw.pu ? '+' + rw.n + ' ' + POWERUPS.filter(function (p) { return p.id === rw.pu; })[0].name : '') + ' (you have ' + save.stickers.length + ').';
     $('#stkTitle').textContent = 'Stickers ' + save.stickers.length + ' / ' + Prog.STICKER_COUNT;
     var sh = '';
     var fresh = {}, order = [], seen = save.seenStk || 0, j;
@@ -177,10 +214,30 @@
     });
     show('play'); fitCanvas(); updateHud();
     $('#hudGoal').textContent = G.goal || '';
+    buildPower();
     var first = !save.seen[id];
     if (first) { save.seen[id] = 1; persist(); }
     if (first || (!timed && level <= 10)) showIntro(first);
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  }
+
+  /* Power-up buttons under the HUD: once per run each. */
+  function buildPower() {
+    var el = $('#pwr'), h = '';
+    if (run.challenge) { el.innerHTML = ''; el.classList.add('none'); return; }
+    POWERUPS.forEach(function (p) {
+      if (p.id === 'time' && run.timeLeft == null) return;
+      var n = save.inv[p.id] || 0, used = run.pu[p.id];
+      h += '<button class="pwb' + (used ? ' used' : n ? '' : ' none0') + '" data-pu="' + p.id + '">' + p.icon + ' ' + p.short + '<b>' + (used ? '✓' : n) + '</b></button>';
+    });
+    el.innerHTML = h; el.classList.toggle('none', !h);
+  }
+  function usePowerBtn(id) {
+    if (!run || paused || run.over) return;
+    var p = POWERUPS.filter(function (x) { return x.id === id; })[0];
+    if (run.pu[id]) { sfx('tick'); return; }
+    if (!(save.inv[id] > 0)) { sfx('bad'); ui.say('None left. Buy in 🛍 Shop'); return; }
+    if (run.usePower(id)) { save.inv[id]--; persist(); sfx('win'); ui.say(p.icon + ' ' + p.name + '!'); buildPower(); }
   }
 
   /* Goal intro: an animated 3-step card shown 3 s before every run until level 10 (and the first time ever). Tap to skip. */
@@ -190,7 +247,7 @@
     if (G.noMeter && !run.timed) h = G.starHelp(run.level);
     else {
       h = '🎯 Goal: <b>' + fmt(run.thr[0]) + '</b> points for ⭐';
-      if (isFinite(run.budget)) h += ' in <b>' + run.budget + '</b> ' + G.unit.toLowerCase();
+      if (isFinite(run.budget) && !G.fixedClock) h += ' in <b>' + run.budget + '</b> ' + G.unit.toLowerCase();
     }
     if (run.timeLeft != null) h += ' · ⏱ <b>' + clockStr(run.clockMax) + '</b>';
     return h;
@@ -199,7 +256,7 @@
     paused = true;
     var panels = (G.intro || []).map(function (p) { return '<div class="ip"><b>' + p[0] + '</b><small>' + p[1] + '</small></div>'; }).join('<span class="ia">▶</span>');
     var secs = long ? 4 : 3;
-    modal('<div class="intro" id="intro"><h2>' + G.icon + ' ' + G.name + '</h2><div class="ipanels">' + panels + '</div><p class="goalp">' + goalLine() + '</p>' +
+    modal('<div class="intro" id="intro"><h2>' + G.icon + ' ' + G.name + '</h2><div class="ipanels">' + panels + '</div><p class="goalp">' + goalLine() + '</p>' + (G.lose ? '<p class="losep">⚠ Game over if ' + G.lose + '</p>' : '') +
       (long ? '<p class="sub"><i>' + G.howDe + '</i></p>' : '') + '<div class="skipbar"><i id="skipI" style="animation-duration:' + secs + 's"></i></div>' +
       '<div class="btns"><button id="inHold">⏸ Hold</button><button class="pri" id="inGo">▶ Start</button></div></div>');
     clearTimeout(introT);
@@ -283,11 +340,23 @@
     persist();
     showResult(out, res, lvl, timed);
   }
+  function reasonOf(i) {
+    i = i || {};
+    if (i.stuck) return '⚠ Game over: none of your 3 shapes fits any more.';
+    if (i.full) return '⚠ Game over: every column is full.';
+    if (i.overflow) return '⚠ Game over: the stack reached the top.';
+    if (i.overrun) return '⚠ Game over: the wall crossed the red line.';
+    if (i.lives) return '⚠ Game over: you lost all hearts.';
+    if (i.miss) return '⚠ Game over: the row missed the tower.';
+    if (i.timeUp) return '⏱ Time is up. The score you had counts.';
+    return '';
+  }
   function showResult(out, res, lvl, timed) {
     var th = timed ? Prog.timedThr(G) : Prog.thresholds(G, lvl), won = res.stars >= 1, i;
     var h = '';
     var title = timed ? (res.stars ? 'Time\'s up! Great job!' : 'Time\'s up!') : (won ? 'Level ' + lvl + ' complete!' : 'So close! Try again');
     h += '<h2>' + title + '</h2>';
+    var why = reasonOf(res.info); if (why) h += '<div class="why">' + why + '</div>';
     h += '<div class="stars" id="rs">' + [0, 1, 2].map(function () { return '<span>' + (timed ? '🏅' : '⭐') + '</span>'; }).join('') + '</div>';
     h += '<div class="big">' + fmt(res.score) + '</div>';
     var best = timed ? out.best : (save.best[G.id + ':' + lvl] || 0);
@@ -346,6 +415,7 @@
     $('#cards').addEventListener('click', function (e) { var b = e.target.closest('[data-g]'); if (b) { sfx('tick'); openGame(b.dataset.g); } });
     on('#lvBack', 'click', function () { renderHome(); show('home'); });
     on('#lvHelp', 'click', function () { modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mClose">OK</button></div>'); });
+    $('#pwr').addEventListener('click', function (e) { var b = e.target.closest('[data-pu]'); if (b) usePowerBtn(b.dataset.pu); });
     on('#tabLv', 'click', function () { renderLevels('lv'); });
     on('#tabTm', 'click', function () { renderLevels('tm'); });
     $('#lvBody').addEventListener('click', function (e) {
@@ -356,11 +426,14 @@
       else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false, chal); }
     });
     on('#gift', 'click', function () {
-      var g = Prog.claimGift(save, today(), Math.random); if (!g) { sfx('tick'); return; }
+      var g = Prog.claimGift(save, today(), Math.random);
+      var days = '', st = g ? g.streak : save.gift.streak, d;
+      for (d = 1; d <= 7; d++) days += '<div class="' + (d <= st ? 'on' : '') + '">Day ' + d + '<br>' + (d === 7 ? '🎁' : '+' + (20 * d)) + '</div>';
+      var how = '<p class="sub" style="text-align:left">🎁 <b>Daily gift</b>: open the game once a day and tap <b>Claim</b> on the start page to get coins. Play on consecutive days to build a streak: the coins grow each day, and <b>day 7 also gives a sticker</b>. Miss a day and the streak starts again. Spend coins in the 🛍 Shop on power-ups, dice skins, board looks and avatars.</p>';
+      if (!g) { sfx('tick'); modal('<h2>🎁 Daily gift</h2><div class="sub">Already claimed today. Come back tomorrow!</div><div class="sub">Streak: day ' + save.gift.streak + ' of 7. Tomorrow: +' + (20 * (save.gift.streak >= 7 ? 1 : save.gift.streak + 1)) + ' 🪙</div><div class="gdays">' + days + '</div>' + how + '<div class="btns"><button class="pri" id="mClose">OK</button></div>'); return; }
       persist(); renderHome(); sfx('win');
-      var days = ''; for (var d = 1; d <= 7; d++) days += '<div class="' + (d <= g.streak ? 'on' : '') + '">Day ' + d + '<br>' + (d === 7 ? '🎁' : '+' + (20 * d)) + '</div>';
       modal('<h2>🎁 Daily gift!</h2><div class="big">+' + g.coins + ' 🪙</div><div class="sub">Day ' + g.streak + ' of 7. Come back tomorrow for more!</div><div class="gdays">' + days + '</div>' +
-        (g.sticker != null ? '<div class="reveal"><div class="em">' + STICKERS[g.sticker] + '</div>New sticker!</div>' : '') + '<div class="btns"><button class="pri" id="mClose">Yay!</button></div>');
+        (g.sticker != null ? '<div class="reveal"><div class="em">' + STICKERS[g.sticker] + '</div>New sticker!</div>' : '') + how + '<div class="btns"><button class="pri" id="mClose">Yay!</button></div>');
     });
     on('#navSet', 'click', function () { renderSettings(); show('settings'); });
     on('#stBack', 'click', function () { renderHome(); show('home'); });
@@ -416,12 +489,19 @@
     on('#navAlbum', 'click', function () { renderAlbum(); show('album'); });
     on('#navSound', 'click', function () { save.sound = !save.sound; persist(); renderHome(); sfx('pop'); });
     on('#alBack', 'click', function () { renderHome(); show('home'); });
-    $('#skins').addEventListener('click', function (e) {
-      var b = e.target.closest('[data-skin]'); if (!b) return;
-      var i = +b.dataset.skin, s = SKINS[i];
-      if (save.skins.indexOf(i) < 0) { if (save.coins < s.price) { sfx('bad'); b.textContent = 'Need ' + (s.price - save.coins) + ' more 🪙'; return; } save.coins -= s.price; save.skins.push(i); sfx('win'); }
-      save.skin = i; setSkin(i); persist(); renderAlbum();
+    function pay(b, price) { if (save.coins < price) { sfx('bad'); b.textContent = 'Need ' + (price - save.coins) + ' more 🪙'; return false; } save.coins -= price; sfx('win'); return true; }
+    $('#shop').addEventListener('click', function (e) {
+      var b = e.target.closest('button'); if (!b) return;
+      var d = b.dataset;
+      if (d.skin != null) { var i = +d.skin; if (save.skins.indexOf(i) < 0) { if (!pay(b, SKINS[i].price)) return; save.skins.push(i); } save.skin = i; setSkin(i); }
+      else if (d.board != null) { var j = +d.board; if (save.boards.indexOf(j) < 0) { if (!pay(b, BOARDS[j].price)) return; save.boards.push(j); } save.board = j; setBoard(j); }
+      else if (d.avatar != null) { if (save.avatars.indexOf(d.avatar) < 0) { if (!pay(b, AVATAR_PRICE)) return; save.avatars.push(d.avatar); } save.avatar = d.avatar; }
+      else if (d.title != null) { var t = +d.title; if (save.titles.indexOf(t) < 0) { if (!pay(b, TITLES[t].price)) return; save.titles.push(t); } save.title = t; }
+      else if (d.pu) { var pu = POWERUPS.filter(function (p) { return p.id === d.pu; })[0]; if (!pay(b, pu.price)) return; save.inv[pu.id] = (save.inv[pu.id] || 0) + 1; }
+      else return;
+      persist(); var y = $('#album').scrollTop; renderAlbum(); $('#album').scrollTop = y;
     });
+    on('#profile', 'click', function () { renderAlbum(); show('album'); });
     var askReset = function () { modal('<h2>Reset everything?</h2><p class="sub">All stars, coins and stickers will be deleted.</p><div class="btns"><button id="mClose">Cancel</button><button class="pri" id="mReset">Reset</button></div>'); };
     on('#pause', 'click', function () { doPause(); });
     $('#modal').addEventListener('click', function (e) {
@@ -429,8 +509,8 @@
       var id = b.id;
       if (id === 'mClose') closeModal();
       else if (id === 'mGo') { closeModal(); paused = false; last = performance.now(); }
-      else if (id === 'mImport' && window.__pendingImport) { save = window.__pendingImport; window.__pendingImport = null; persist(); setSkin(save.skin || 0); applySettings(); closeModal(); renderHome(); show('home'); }
-      else if (id === 'mReset') { save = Prog.newSave(); fixSet(save); persist(); setSkin(0); applySettings(); closeModal(); renderHome(); show('home'); }
+      else if (id === 'mImport' && window.__pendingImport) { save = window.__pendingImport; window.__pendingImport = null; persist(); setSkin(save.skin || 0); setBoard(save.board || 0); applySettings(); closeModal(); renderHome(); show('home'); }
+      else if (id === 'mReset') { save = Prog.newSave(); fixSet(save); persist(); setSkin(0); setBoard(0); applySettings(); closeModal(); renderHome(); show('home'); }
       else if (id === 'pResume') { closeModal(); paused = false; last = performance.now(); }
       else if (id === 'pRestart' || id === 'rRetry') startRun(run.G.id, run.level, run.timed);
       else if (id === 'pQuit' || id === 'rBack') { closeModal(); run = null; cancelAnimationFrame(raf); openGame(curGame); }
@@ -498,7 +578,7 @@
   function setMsg(t) { var m = $('#stMsg'); if (m) m.textContent = t; }
 
   function init() {
-    save = load(); setSkin(save.skin || 0); applySettings();
+    save = load(); setSkin(save.skin || 0); setBoard(save.board || 0); applySettings();
     wire(); renderHome(); show('home');
     if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) navigator.serviceWorker.register('sw.js').catch(function () {});
     window.__app = { get save() { return save; }, get run() { return run; }, startRun: startRun, Prog: Prog, Games: Games };

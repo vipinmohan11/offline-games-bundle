@@ -16,11 +16,10 @@
 <body>
 <div id="app">
   <section id="home" class="screen"><div class="hub">
-    <div class="hubtop"><div class="brand">🎲 Dice Arcade</div>
-      <div class="rankpill" title="Rank"><span id="rankName"></span><span class="rbar"><i id="rankBar"></i></span><span id="rankXp"></span></div>
-      <div class="chip" id="coins">🪙 0</div></div>
+    <nav class="anav"><span class="alogo">⚄ Dice Arcade</span><span class="aright"><button id="profile" class="prof" aria-label="Profile and shop"><span id="pAv">🎲</span><span id="pName"></span></button><span class="chip" id="coins">🪙 0</span></span></nav>
+    <header class="hero"><h1>Roll. Match. <em>Master.</em></h1><p class="sub" id="rankLine"></p><div class="rbar"><i id="rankBar"></i></div></header>
     <div class="cards" id="cards"></div>
-    <div class="dock"><button id="gift" aria-label="Daily gift">🎁<small>Gift</small></button><button id="navAlbum" aria-label="Stickers and shop">🎨<small>Shop</small></button><button id="navSet" aria-label="Settings">⚙<small>Settings</small></button><button id="navSound" aria-label="Sound">🔊<small>Sound</small></button></div>
+    <div class="dock"><button id="gift" aria-label="Daily gift">🎁<small>Gift</small></button><button id="navAlbum" aria-label="Shop and stickers">🛍<small>Shop</small></button><button id="navSet" aria-label="Settings">⚙<small>Settings</small></button><button id="navSound" aria-label="Sound">🔊<small>Sound</small></button></div>
   </div></section>
 
   <section id="levels" class="screen hidden"><div class="wrap">
@@ -32,9 +31,9 @@
   </div></section>
 
   <section id="album" class="screen hidden"><div class="wrap">
-    <div class="hdr"><button id="alBack">←</button><h2>Stickers &amp; Shop</h2><div class="chip" id="alCoins"></div></div>
-    <h3>Dice skins</h3><div class="skins" id="skins"></div>
-    <h3 id="stkTitle">Stickers</h3><div class="sgrid" id="stickers"></div>
+    <div class="hdr"><button id="alBack">←</button><h2>Shop</h2><div class="chip" id="alCoins"></div></div>
+    <div id="shop"></div>
+    <h3 id="stkTitle">Stickers</h3><p class="note" id="stkNote"></p><div class="sgrid" id="stickers"></div>
     <p class="note">Win stickers from chests (every 5th level), rank-ups and the 7th day of your daily gift streak.</p>
     <p class="note">Backup, restore and reset are in ⚙ Settings.</p>
   </div></section>
@@ -50,6 +49,7 @@
       <div class="hmid"><div id="hudTitle"></div><div id="hudGoal"></div><div class="meter" id="meter"></div><div class="tbar hidden" id="tbar"><i></i></div></div>
       <div class="hr"><div id="hudScore">0</div><div id="hudLeft"></div></div>
     </div>
+    <div id="pwr"></div>
     <div id="stage"><canvas id="cv"></canvas><div id="say"></div></div>
     <div id="ctl"></div>
   </section>

@@ -128,6 +128,7 @@
   Tower.prototype.pm = function () {}; Tower.prototype.pu = function () {}; Tower.prototype.btn = function (k) { if (k === 'drop') this.drop(); };
 
   Games.tower = {
+    lose: 'the row misses the tower completely',
     goal: "Tap to drop the row · stack it straight",
     intro: [["↔ ⚅⚅⚅", "The row swings left and right"], ["👆 TAP", "Tap to drop it on the tower"], ["🗼", "Line it up. Overhang is cut off"]],
     id: 'tower', name: 'Dice Tower', icon: '🗼', color: '#339af0', unit: 'Drops',

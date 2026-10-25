@@ -15,7 +15,7 @@
     this.env = env; this.W_ = WORLDS[T ? 0 : world(l)];
     this.g = []; for (var r = 0; r < ROWS; r++) this.g.push(new Array(COLS).fill(0));
     this.maxSpawn = T ? 3 : l < 12 ? 3 : l < 28 ? 4 : 5;
-    this.drops = T ? Infinity : env.budget;
+    this.drops = Infinity;                       // the 2-minute clock ends the level
     this.busy = 0; this.col = 2; this.pop = []; this.flowers = 0; this.fall = [];
     var rocks = T ? 0 : Math.min(9, Math.floor(l / 4)), k = 0;
     while (k < rocks) { var c = this.rand(COLS), rw = ROWS - 1 - this.rand(2); if (!this.g[rw][c]) { this.g[rw][c] = ROCK; k++; } }
@@ -106,15 +106,13 @@
       this.flowers += res.flowers;
       if (res.flowers) { this.env.say(this.W_.bloom + ' Bloom!'); this.env.flowers = (this.env.flowers || 0) + res.flowers; }
     }
-    this.busy = 0.18;
+    this.busy = 0.5;                                                     // short lock so the next die is not dropped by accident
     this.cur = this.next; this.next = this.roll();
+    var freeN = 0; for (var fy = 0; fy < ROWS; fy++) for (var fx = 0; fx < COLS; fx++) if (!this.g[fy][fx]) freeN++;
+    if (freeN <= 8 && !this.warned) { this.warned = true; this.env.say('⚠ Garden almost full!'); this.env.sfx('bad'); } else if (freeN > 14) this.warned = false;
     var full = true; for (var cc = 0; cc < COLS; cc++) if (this.landRow(this.g, cc) >= 0) full = false;
     if (full) {
       var empty = 0; this.env.finish({ full: true, flowers: this.flowers });
-    } else if (!this.env.timed && this.drops <= 0) {
-      var e = 0; for (var rr2 = 0; rr2 < ROWS; rr2++) for (var c2 = 0; c2 < COLS; c2++) if (!this.g[rr2][c2]) e++;
-      this.env.addScore(e * 3, this.W / 2, this.H / 2, '#8ce99a');   // tidy-garden bonus
-      this.env.finish({ done: true, flowers: this.flowers });
     }
     return true;
   };
@@ -155,32 +153,32 @@
     var s = this.cell, ox = this.ox, oy = this.oy, r, cc;
     rr(c, ox - 6, oy - 6, s * COLS + 12, s * ROWS + 12, 14); c.fillStyle = 'rgba(0,0,0,0.3)'; c.fill();
     rr(c, ox, oy, s * COLS, s * ROWS, 10); c.fillStyle = this.W_.bg; c.fill();
-    for (cc = 0; cc < COLS; cc++) if (cc === this.col) { c.fillStyle = 'rgba(255,255,255,0.1)'; c.fillRect(ox + cc * s, oy, s, s * ROWS); }
     for (r = 0; r < ROWS; r++) for (cc = 0; cc < COLS; cc++) {
       var v = this.g[r][cc]; if (!v) continue;
       if (v === ROCK) { rr(c, ox + cc * s + 3, oy + r * s + 3, s - 6, s - 6, s * 0.25); c.fillStyle = '#868e96'; c.fill(); text(c, '🪨', ox + (cc + 0.5) * s, oy + (r + 0.5) * s, s * 0.55); }
       else drawDie(c, ox + cc * s, oy + r * s, s, v);
     }
     this.pop.forEach(function (p) { text(c, this.W_.bloom, ox + (p.x + 0.5) * s, oy + (p.y + 0.5) * s - (1.4 - p.t) * s, s * (0.7 + (1.4 - p.t) * 0.6)); }, this);
-    drawDie(c, ox + this.col * s, oy - s * 1.15, s, this.cur, { stroke: '#fff' });
+    drawDie(c, ox + this.col * s, oy - s * 1.15, s, this.cur, { stroke: this.busy > 0 ? null : '#fff', alpha: this.busy > 0 ? 0.35 : 1 });
     text(c, 'NEXT', ox + s * 0.1, oy - s * 1.38, s * 0.26, '#cde', 'left');
     drawDie(c, ox + s * 0.1 + s * 0.8, oy - s * 1.6, s * 0.46, this.next);          // sits on the top row, clear of the die you hold
     text(c, '1→2→3→4→5→' + this.W_.bloom, ox + s * 2.55, oy - s * 1.38, Math.min(s * 0.26, 14), '#cde', 'center', '700');
     text(c, this.W_.bloom + ' ' + this.flowers, ox + COLS * s - 4, oy - s * 1.38, s * 0.4, '#ffd43b', 'right');
   };
   Garden.prototype.colAt = function (x) { return clamp(Math.floor((x - this.ox) / this.cell), 0, COLS - 1); };
-  Garden.prototype.pd = function (x) { this.col = this.colAt(x); this.down = true; };
+  Garden.prototype.pd = function (x) { if (this.busy > 0) return; this.col = this.colAt(x); this.down = true; };
   Garden.prototype.pm = function (x) { if (this.down) this.col = this.colAt(x); };
   Garden.prototype.pu = function (x) { if (!this.down) return; this.down = false; this.col = this.colAt(x); this.dropIn(this.col); };
   Garden.prototype.btn = function (k) { if (k === 'hint') { var m = this.bestCol(false); if (m) { this.col = m.c; this.env.say('Try the glowing column'); } } };
 
   Games.garden = {
+    lose: 'every column is full',
     goal: "Merge 3 same dice · three 5s = a flower",
     intro: [["⚀ ⚀ ⚀", "Drop 3 same dice together"], ["→ ⚁", "They merge into the next number"], ["⚄⚄⚄ → 🌸", "Three 5s bloom a flower!"]],
     id: 'garden', name: 'Dice Garden', icon: '🌸', color: '#40c057', unit: 'Drops',
     blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.', howDe: 'Ziehe über eine Spalte und lass los. 3 gleiche Würfel werden zur nächsten Zahl. Drei Fünfen lassen eine Blume blühen.',
-    par: 21, budget: function (l) { return 30 + Math.floor(l * 0.7); }, timedPar: 5.4, timedSecs: 90,
-    levelTime: function (l) { return Math.round(this.budget(l) * perMoveSecs(l)); },
+    par: 21, budget: function (l) { return 36 + Math.floor(l * 0.5); }, timedPar: 5.4, timedSecs: 90,       // budget = drops a steady player makes in 2 minutes (sets the goals)
+    levelTime: function () { return 120; }, fixedClock: true,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Garden(env); }
   };

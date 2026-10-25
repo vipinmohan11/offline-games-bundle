@@ -152,6 +152,8 @@
       var b2 = copy(this.b); place(b2, this.hov, ME, this.die);
       for (i = 0; i < N * N; i++) if (b2[i].o !== this.b[i].o) prev[i] = 1;
     }
+    var showFl = this.turn === ME && this.state === 'play' && (this.env.timed || this.env.level <= 20), flN = {}, fbest = 0;
+    if (showFl) for (i = 0; i < N * N; i++) if (!this.b[i].o) { var bb = copy(this.b); flN[i] = place(bb, i, ME, this.die).length; fbest = Math.max(fbest, flN[i]); }
     for (i = 0; i < N * N; i++) {
       var r = Math.floor(i / N), cc = i % N, x = ox + cc * s, y = oy + r * s, d = this.b[i];
       rr(c, x + 2, y + 2, s - 4, s - 4, s * 0.15); c.fillStyle = this.hov === i ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.05)'; c.fill();
@@ -163,6 +165,13 @@
         c.fillStyle = '#fff'; c.strokeStyle = 'rgba(0,0,0,0.5)'; c.lineWidth = 1.5; c.beginPath();
         if (d.o === ME) c.arc(mx, my, mr, 0, 6.2832); else { c.moveTo(mx, my - mr * 1.3); c.lineTo(mx + mr * 1.3, my); c.lineTo(mx, my + mr * 1.3); c.lineTo(mx - mr * 1.3, my); c.closePath(); }
         c.fill(); c.stroke();
+      }
+      if (showFl && !d.o) {                                  // how many enemy dice this square would flip
+        var fn = flN[i], bxx = x + s * 0.5, byy = y + s * 0.5;
+        if (fn > 0) {
+          rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.fillStyle = 'rgba(105,219,124,' + (fn === fbest ? 0.3 : 0.14) + ')'; c.fill();
+          text(c, '+' + fn, bxx, byy, s * 0.42, fn === fbest ? '#8ce99a' : '#6fbf7f');
+        } else { c.beginPath(); c.arc(bxx, byy, s * 0.06, 0, 6.2832); c.fillStyle = 'rgba(255,255,255,0.25)'; c.fill(); }
       }
       if (prev[i]) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = '#ffd43b'; c.lineWidth = 3; c.stroke(); }
       if (this.hint === i && this.hintT > 0) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.2); c.strokeStyle = 'rgba(140,233,154,' + (0.5 + 0.5 * Math.sin(this.env.t * 8)) + ')'; c.lineWidth = 4; c.stroke(); }
@@ -186,18 +195,18 @@
     text(c, '● You ' + sm[ME], px + pw * 0.25, cy, Math.min(26, s * 0.5), COLOR[ME]);
     text(c, '◆ ' + BOT + ' ' + sm[CPU], px + pw * 0.75, cy, Math.min(26, s * 0.5), COLOR[CPU]);
     if (!this.env.timed) {
-      var wr = '', k; for (k = 0; k < 2; k++) wr += (k < this.wins[ME] ? '🏆' : '▫️') + ' ';
-      text(c, wr, px + pw * 0.25, cy + 40, 20); var wc = ''; for (k = 0; k < 2; k++) wc += (k < this.wins[CPU] ? '🏆' : '▫️') + ' ';
-      text(c, wc, px + pw * 0.75, cy + 40, 20);
+      text(c, 'Wins ' + this.wins[ME] + ' / 2', px + pw * 0.25, cy + 40, 15, '#9db4e8');
+      text(c, 'Wins ' + this.wins[CPU] + ' / 2', px + pw * 0.75, cy + 40, 15, '#e8a0a0');
       text(c, 'Round ' + Math.min(this.round, 3), px + pw * 0.5, cy + 40, 14, '#99a');
     } else text(c, 'Round ' + this.round + ' · wins ' + this.wins[ME], px + pw * 0.5, cy + 40, 14, '#99a');
-    var dy = cy + 40 + Math.min(70, s * 1.0);
+    var dy = cy + 62 + Math.min(70, s * 1.0);
     var ds = Math.min(s * 1.0, 70);
     if (this.state === 'play') {
       var mine = this.turn === ME;
-      text(c, mine ? 'Your die - tap a square (' + Math.max(0, Math.ceil(this.tt)) + 's)' : BOT + ' is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? (this.tt < 3 ? '#ff8787' : '#fff') : '#99a', 'center', '600');
+      text(c, mine ? 'Your turn - tap a square (' + Math.max(0, Math.ceil(this.tt)) + 's)' : BOT + ' is thinking...', px + pw / 2, dy - ds * 0.85, 15, mine ? (this.tt < 3 ? '#ff8787' : '#fff') : '#99a', 'center', '600');
       drawDie(c, px + pw / 2 - ds / 2, dy - ds * 0.55, ds, this.die, { color: COLOR[this.turn], stroke: '#fff' });
     }
+    if (showFl) text(c, 'Green +n = enemy dice you flip', px + pw / 2, dy + ds * 0.75, Math.min(13, s * 0.26), '#8f98c4', 'center', '600');
     if (this.banner) {
       c.fillStyle = 'rgba(0,0,0,0.6)'; c.fillRect(ox, oy + bw * 0.34, bw, bw * 0.32);
       text(c, this.banner.text, ox + bw / 2, oy + bw * 0.46, Math.min(28, s * 0.55), '#ffd43b');
@@ -214,6 +223,7 @@
   Duel.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.duel = {
+    lose: 'Bolt wins 2 rounds',
     goal: "A bigger die flips smaller enemy dice",
     intro: [["🔵⚅  🔴⚂", "Place your die on a free square"], ["⚅ ▶ ⚂", "A bigger die flips smaller enemy dice next to it"], ["🏆 🏆", "Most pips when full wins the round. Win 2!"]],
     id: 'duel', name: 'Dice Duel', icon: '⚔️', color: '#e64980', unit: 'Rounds', noMeter: true,

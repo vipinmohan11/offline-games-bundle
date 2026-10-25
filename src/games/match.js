@@ -89,7 +89,7 @@
     if (bad) {                                                                                       // a false swap really happens, costs a move and stays swapped
       this.env.sfx('bad'); this.env.mistake(); this.sel = null; this.hintM = null; this.shake = 0.25;
       if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
-      this.env.say('No match! Move lost');
+      this.env.say('No match! Move lost'); this.flash = { cells: [a, b], t: 1.2 };
       this.chain = 0; this.swapA = null; this.afterResolve();
       return true;
     }
@@ -153,13 +153,15 @@
     this.env.addScore(pts, this.ox + (cx / n + 0.5) * this.cell, this.oy + (cy / n + 0.5) * this.cell, this.chain > 1 ? '#ffd43b' : '#fff');
     this.env.sfx(this.chain > 1 ? 'combo' : 'pop');
     if (this.chain > 1) this.env.say('Combo x' + this.chain + '!');
-    this.clearing = { cells: cells, specials: specials, t: 0.25 }; this.state = 'clear';
+    this.rings = this.rings || []; this.rings.push({ x: this.ox + (cx / n + 0.5) * this.cell, y: this.oy + (cy / n + 0.5) * this.cell, t: 0, big: this.chain > 1 || specials.length > 0 || n >= 5 });
+    if (specials.length) this.env.say(specials.some(function (q) { return q.s === 2; }) ? '🌈 Rainbow die!' : '💣 Bomb made!');
+    this.clearing = { cells: cells, specials: specials, t: 0.25, t0: 0.25 }; this.state = 'clear';
   };
   Match.prototype.finishClear = function () {
     var cl = this.clearing, self = this;
     cl.cells.forEach(function (p) {
       var d = self.g[p[0]][p[1]];
-      if (d) self.env.burst(self.ox + (p[1] + 0.5) * self.cell, self.oy + (p[0] + 0.5) * self.cell, Skin.cur.faces[Math.max(0, d.v - 1)], 4);
+      if (d) self.env.burst(self.ox + (p[1] + 0.5) * self.cell, self.oy + (p[0] + 0.5) * self.cell, Skin.cur.faces[Math.max(0, d.v - 1)], 9);
       self.g[p[0]][p[1]] = null;
     });
     cl.specials.forEach(function (sp) { self.g[sp.pos[0]][sp.pos[1]] = { v: sp.v, s: sp.s, oy: 0 }; });
@@ -169,7 +171,7 @@
       var w = ROWS - 1, r;
       for (r = ROWS - 1; r >= 0; r--) if (this.g[r][c]) { var d = this.g[r][c]; this.g[r][c] = null; d.oy -= (w - r); this.g[w][c] = d; w--; }
       var k = 0;
-      for (r = w; r >= 0; r--) { var nd = this.newDie(); nd.oy = -(w + 1) - 0.0 - k * 0; this.g[r][c] = nd; }
+      for (r = w; r >= 0; r--) { var nd = this.newDie(); nd.oy = -(w + 1) - 0.0 - k * 0; nd.fresh = 1.4; this.g[r][c] = nd; }
     }
     this.state = 'fall';
   };
@@ -181,6 +183,9 @@
   };
   Match.prototype.update = function (dt) {
     this.hintT -= dt; if (this.shake > 0) this.shake -= dt;
+    if (this.flash) { this.flash.t -= dt; if (this.flash.t <= 0) this.flash = null; }
+    if (this.rings) this.rings = this.rings.filter(function (q) { q.t += dt; return q.t < 0.6; });
+    for (var fr = 0; fr < ROWS; fr++) for (var fc = 0; fc < COLS; fc++) { var fd = this.g[fr][fc]; if (fd && fd.fresh > 0) fd.fresh -= dt; }
     if (this.state === 'clear') { this.clearing.t -= dt; if (this.clearing.t <= 0) this.finishClear(); }
     else if (this.state === 'fall') {
       var moving = false;
@@ -214,17 +219,24 @@
       if (y < oy - s * 0.2 && d.oy < 0) { c.save(); c.beginPath(); c.rect(ox, oy, s * COLS, s * ROWS); c.clip(); }
       else c.save();
       if (this.shake > 0 && this.sel) x += Math.sin(this.env.t * 60) * 2;
-      var m = mark[r * 10 + cc];
+      var m = mark[r * 10 + cc], pk = this.clearing ? 1 - this.clearing.t / this.clearing.t0 : 0;
       if (d.s === 3) { rr(c, x + 3, y + 3, s - 6, s - 6, s * 0.22); c.fillStyle = m && blink ? '#ced4da' : '#868e96'; c.fill(); text(c, '🪨', x + s / 2, y + s / 2, s * 0.55); }
       else if (d.s === 2) {
         drawDie(c, x, y, s, d.v, { color: '#f8f9fa', pip: '#f8f9fa', alpha: m && blink ? 0.4 : 1 });
         var cols = Skin.cur.faces; for (var i = 0; i < 6; i++) { c.fillStyle = cols[i]; c.beginPath(); c.arc(x + s * 0.5 + Math.cos(i * 1.047 + this.env.t * 2) * s * 0.26, y + s * 0.5 + Math.sin(i * 1.047 + this.env.t * 2) * s * 0.26, s * 0.1, 0, 6.3); c.fill(); }
       } else {
-        drawDie(c, x, y, s, d.v, { alpha: m && blink ? 0.4 : 1, scale: m ? 1.08 : 1, stroke: d.s === 1 ? '#fff' : null });
+        drawDie(c, x, y, s, d.v, { alpha: m ? 1 - 0.7 * pk : 1, scale: m ? 1 + 0.35 * Math.sin(Math.min(1, pk * 1.4) * 3.14) + 0.1 * pk : 1, stroke: m ? '#fff' : d.s === 1 ? '#fff' : (d.fresh > 0 ? 'rgba(255,255,255,' + Math.min(1, d.fresh) + ')' : null) });
         if (d.s === 1) text(c, '💣', x + s * 0.8, y + s * 0.2, s * 0.32);
       }
       c.restore();
     }
+    // after a wrong swap: both dice are outlined red with a cross, so it is clear what moved
+    if (this.flash) {
+      var fa = Math.min(1, this.flash.t * 2);
+      this.flash.cells.forEach(function (p) { rr(c, ox + p[1] * s + 1, oy + p[0] * s + 1, s - 2, s - 2, s * 0.2); c.fillStyle = 'rgba(255,80,80,' + 0.25 * fa + ')'; c.fill(); c.strokeStyle = 'rgba(255,80,80,' + fa + ')'; c.lineWidth = 4; c.stroke(); text(c, '✖', ox + (p[1] + 0.5) * s, oy + (p[0] + 0.5) * s, s * 0.6, 'rgba(255,255,255,' + fa + ')'); });
+    }
+    // burst rings
+    (this.rings || []).forEach(function (q) { var k = q.t / 0.6; c.beginPath(); c.arc(q.x, q.y, s * (0.4 + (q.big ? 2.2 : 1.2) * k), 0, 6.2832); c.lineWidth = (q.big ? 6 : 3) * (1 - k); c.strokeStyle = q.big ? 'rgba(255,212,59,' + (1 - k) + ')' : 'rgba(255,255,255,' + (0.8 * (1 - k)) + ')'; c.stroke(); });
     if (this.sel) { rr(c, ox + this.sel[1] * s + 1, oy + this.sel[0] * s + 1, s - 2, s - 2, s * 0.2); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); }
     if (this.hintM && this.hintT > 0 && this.state === 'idle') {
       var pul = 0.5 + 0.5 * Math.sin(this.env.t * 8);
@@ -257,6 +269,7 @@
   Match.prototype.btn = function (k) { if (k === 'hint') this.showHint(); };
 
   Games.match = {
+    lose: 'you run out of moves or time',
     goal: "Swap to line up 3+ same dice",
     intro: [["⚂ ⇄ ⚃", "Swap two neighbours"], ["⚂ ⚂ ⚂", "Line up 3 or more same dice"], ["⚠", "A wrong swap still happens and costs a move!"]],
     id: 'match', name: 'Dice Match', icon: '💎', color: '#f06595', unit: 'Moves',

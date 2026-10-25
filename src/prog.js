@@ -46,7 +46,7 @@ var Prog = (function () {
   }
 
   function newSave() {
-    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0, seenStk: 0,
+    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0, seenStk: 0, inv: { time: 0, x2: 0, slow: 0 }, boards: [0], board: 0, avatars: [], avatar: '', titles: [0], title: 0, stkClaimed: 0,
       skin: 0, skins: [0], gift: { last: '', streak: 0 }, sound: true, flowers: 0, plays: 0, seen: {} };
   }
   function rankOf(xp) {
@@ -162,7 +162,20 @@ var Prog = (function () {
     return { coins: coins, streak: streak, sticker: st };
   }
 
-  return { LEVELS: LEVELS, STAR_GAP: STAR_GAP, MEDAL_MULT: MEDAL_MULT, MEDAL_COINS: MEDAL_COINS, STICKER_COUNT: STICKER_COUNT,
+  // Collection bonus: every 8 stickers pays a reward (coins or power-ups, the last one an avatar).
+  var STK_STEP = 8;
+  var STK_REWARDS = [{ coins: 150 }, { pu: 'time', n: 2 }, { coins: 250 }, { pu: 'x2', n: 2 }, { coins: 350 }, { pu: 'slow', n: 2 }, { coins: 450 }, { coins: 600, pu: 'time', n: 3 }];
+  function stickerBonus(save) {
+    var out = [];
+    while (save.stkClaimed < STK_REWARDS.length && save.stickers.length >= (save.stkClaimed + 1) * STK_STEP) {
+      var r = STK_REWARDS[save.stkClaimed]; save.stkClaimed++;
+      if (r.coins) save.coins += r.coins;
+      if (r.pu) save.inv[r.pu] = (save.inv[r.pu] || 0) + r.n;
+      out.push(r);
+    }
+    return out;
+  }
+  return { STK_STEP: STK_STEP, STK_REWARDS: STK_REWARDS, stickerBonus: stickerBonus, LEVELS: LEVELS, STAR_GAP: STAR_GAP, MEDAL_MULT: MEDAL_MULT, MEDAL_COINS: MEDAL_COINS, STICKER_COUNT: STICKER_COUNT,
     f1: f1, D: D, rho: rho, pTarget: pTarget, allowedMistakes: allowedMistakes, isBoss: isBoss, styleOf: styleOf, styleRank: styleRank, GUIDED: GUIDED, thresholds: thresholds, starsFor: starsFor, timedThr: timedThr, medalFor: medalFor,
     newSave: newSave, rankOf: rankOf, isUnlocked: isUnlocked, totalStars: totalStars,
     coinsForStars: coinsForStars, chestCoins: chestCoins, applyLevel: applyLevel, applyTimed: applyTimed,

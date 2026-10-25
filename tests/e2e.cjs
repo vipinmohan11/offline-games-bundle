@@ -57,6 +57,8 @@ const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL: ' + m); } };
       await page.evaluate(() => {
         window.__bot = setInterval(() => { const r = window.__app.run; if (r && !r.over && r.game.bot) { r.skill = { eps: 0, tempo: 0.05, noise: 1, think: 0.2 }; for (let i = 0; i < 4; i++) r.game.bot(1 / 30); } }, 33);
       });
+      await page.waitForFunction(() => { const r = window.__app.run; return !r || r.over || r.score >= r.thr[0]; }, null, { timeout: 100000, polling: 500 });
+      await page.evaluate(() => { const r = window.__app.run; if (r && r.timeLeft != null && !r.over) r.timeLeft = Math.min(r.timeLeft, 2); });   // 2-minute levels: once the goal is met, let the clock run out
       await page.waitForSelector('#rs', { timeout: 120000 });
       await page.evaluate(() => clearInterval(window.__bot));
       await page.waitForTimeout(1300);   // stars animate in
@@ -72,7 +74,7 @@ const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL: ' + m); } };
     ok(st.coins > 0 && st.xp > 0, 'coins and XP saved (' + st.coins + ' coins, ' + st.xp + ' xp)');
     await page.reload(); await page.waitForSelector('.gcard');
     const after = await page.evaluate(() => ({ coins: document.querySelector('#coins').textContent, cards: [...document.querySelectorAll('.st')].map(e => e.textContent) }));
-    ok(after.cards.every(t => /LV 2/i.test(t)), 'after reload every game offers level 2: ' + after.cards.join(' | '));
+    ok(after.cards.every(t => /Level 2/i.test(t)), 'after reload every game offers level 2: ' + after.cards.join(' | '));
     // daily gift, album, shop
     await page.click('#gift', { force: true }); await page.waitForSelector('.gdays'); await page.click('#mClose');
     await page.click('#navAlbum'); await page.waitForSelector('.skin');
