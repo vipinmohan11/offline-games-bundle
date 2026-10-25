@@ -69,13 +69,14 @@
     $('#rankName').textContent = 'Rank ' + rk.rank + ' · ' + rankName(rk.rank);
     $('#rankXp').textContent = rk.into + ' / ' + rk.need + ' XP';
     $('#rankBar').style.width = (100 * rk.into / rk.need) + '%';
-    $('#gift').classList.toggle('hidden', !Prog.giftReady(save, today()));
-    $('#navSound').textContent = save.sound ? '🔊 Sound on' : '🔇 Sound off';
+    $('#gift').classList.toggle('rdy', Prog.giftReady(save, today()));
+    $('#navSound').firstChild.textContent = save.sound ? '🔊' : '🔇';
     var h = '';
     ORDER.forEach(function (id) {
       var g = Games[id];
-      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '"><span class="ic">' + g.icon + '</span><span class="nm">' + g.name +
-        '</span><span class="bl">' + g.blurb + '</span><span class="st">Level ' + topLevel(id) + ' · ⭐ ' + Prog.totalStars(save, id) + '/' + (Prog.LEVELS * 3) + '</span></button>';
+      var pct = Math.round(100 * Prog.totalStars(save, id) / (Prog.LEVELS * 3));
+      h += '<button class="gcard" data-g="' + id + '" style="--c:' + g.color + '" aria-label="' + g.name + '"><span class="ic">' + g.icon + '</span><span class="nm">' + g.name.replace('Dice ', '') +
+        '</span><span class="st">Lv ' + topLevel(id) + '</span><span class="sbar" title="' + Prog.totalStars(save, id) + ' stars"><i style="width:' + pct + '%"></i></span></button>';
     });
     $('#cards').innerHTML = h;
   }
@@ -95,17 +96,16 @@
     if (tab === 'lv') {
       var cur = topLevel(id);
       var nextChest = Math.ceil(cur / 5) * 5; if (nextChest > Prog.LEVELS) nextChest = 0;
-      h += '<p class="note">⭐ ' + Prog.totalStars(save, id) + ' / ' + (Prog.LEVELS * 3) + ' stars' + (nextChest ? ' · next 🎁 chest at level ' + nextChest + ' (+' + Prog.chestCoins(nextChest) + ' 🪙 and a sticker)' : '') + '</p>';
+      h += '<p class="note">⭐ ' + Prog.totalStars(save, id) + ' / ' + (Prog.LEVELS * 3) + (nextChest ? ' · next 🎁 at level ' + nextChest : '') + '</p>';
       h += '<div class="lvgrid">';
       for (i = 1; i <= Prog.LEVELS; i++) {
         var ok = Prog.isUnlocked(save, id, i), st = (save.stars[id] || {})[i] || 0;
-        if (i === Prog.GUIDED + 1) h += '</div><p class="note">🏁 Endless Ladder: levels ' + i + '–' + Prog.LEVELS + ' get slowly harder.</p><div class="lvgrid">';
+        if (i === Prog.GUIDED + 1) h += '</div><p class="note">🏁 Endless Ladder ' + i + '–' + Prog.LEVELS + '</p><div class="lvgrid">';
         h += '<button class="lv ' + (ok ? '' : 'lock') + (i === cur ? ' cur' : '') + '" data-l="' + i + '"' + (ok ? '' : ' data-lock="1"') + '>' +
           (i % 5 === 0 ? '<span class="ch">' + (Prog.isBoss(i) ? '👑' : '🎁') + '</span>' : '') + ((save.stamps[id] || {})[i] ? '<span class="ch" style="left:4px;right:auto">💎</span>' : '') + '<b>' + (ok ? i : '🔒') + '</b><small>' + (ok ? '⭐'.repeat(st) + '<i style="opacity:.35;font-style:normal">' + '⭐'.repeat(3 - st) + '</i>' : '') + '</small></button>';
       }
-      h += '</div><p class="note">👑 boss level every 10th (extra sticker) · 💎 Gold Stamp = 3★ with no mistakes · 🎁 chest every 5th gives a 🎖 token</p>';
-      h += '<label class="how" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="chal" style="width:22px;height:22px"' + (save.tokens > 0 ? '' : ' disabled') + '> <span>⚔ Star Challenge: win 3★ for double coins. Uses 1 🎖 token (you have ' + (save.tokens || 0) + '). Lose and only the token is gone.<br><i>Mut-Herausforderung: 3 Sterne = doppelte Münzen. Verlierst du, ist nur der Chip weg.</i></span></label>';
-      h += '<div class="btns"><button class="pri" id="goCur">▶ Play level ' + cur + '</button></div>';
+      h += '</div><div class="lvfoot"><label class="chal' + (save.tokens > 0 ? '' : ' off') + '" title="Star Challenge: win 3 stars for double coins. Costs 1 token; if you lose only the token is gone."><input type="checkbox" id="chal"' + (save.tokens > 0 ? '' : ' disabled') + '><span>⚔ 🎖' + (save.tokens || 0) + '</span></label><button class="pri" id="goCur">▶ Level ' + cur + '</button></div>';
+      h += '<p class="note leg">👑 boss · 💎 perfect · 🎁 chest · ⚔ Star Challenge (3★ = double coins)</p>';
     } else {
       var t = save.timed[id] || { medal: 0, best: 0 }, th = Prog.timedThr(G);
       h += '<div class="how"><b>⏱ Timed: ' + G.timedSecs + ' seconds.</b> Score as much as you can. It gets faster as you go!</div>';
@@ -280,6 +280,7 @@
 
     $('#cards').addEventListener('click', function (e) { var b = e.target.closest('[data-g]'); if (b) { sfx('tick'); openGame(b.dataset.g); } });
     on('#lvBack', 'click', function () { renderHome(); show('home'); });
+    on('#lvHelp', 'click', function () { modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mClose">OK</button></div>'); });
     on('#tabLv', 'click', function () { renderLevels('lv'); });
     on('#tabTm', 'click', function () { renderLevels('tm'); });
     $('#lvBody').addEventListener('click', function (e) {
@@ -290,7 +291,7 @@
       else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false, chal); }
     });
     on('#gift', 'click', function () {
-      var g = Prog.claimGift(save, today(), Math.random); if (!g) return;
+      var g = Prog.claimGift(save, today(), Math.random); if (!g) { sfx('tick'); return; }
       persist(); renderHome(); sfx('win');
       var days = ''; for (var d = 1; d <= 7; d++) days += '<div class="' + (d <= g.streak ? 'on' : '') + '">Day ' + d + '<br>' + (d === 7 ? '🎁' : '+' + (20 * d)) + '</div>';
       modal('<h2>🎁 Daily gift!</h2><div class="big">+' + g.coins + ' 🪙</div><div class="sub">Day ' + g.streak + ' of 7. Come back tomorrow for more!</div><div class="gdays">' + days + '</div>' +

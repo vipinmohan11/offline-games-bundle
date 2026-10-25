@@ -72,7 +72,7 @@ const ok = (c, m) => { if (!c) { fails++; console.log('  FAIL: ' + m); } };
     ok(st.coins > 0 && st.xp > 0, 'coins and XP saved (' + st.coins + ' coins, ' + st.xp + ' xp)');
     await page.reload(); await page.waitForSelector('.gcard');
     const after = await page.evaluate(() => ({ coins: document.querySelector('#coins').textContent, cards: [...document.querySelectorAll('.st')].map(e => e.textContent) }));
-    ok(after.cards.every(t => /Level 2/.test(t)), 'after reload every game offers level 2: ' + after.cards.join(' | '));
+    ok(after.cards.every(t => /Lv 2/.test(t)), 'after reload every game offers level 2: ' + after.cards.join(' | '));
     // daily gift, album, shop
     await page.click('#gift'); await page.waitForSelector('.gdays'); await page.click('#mClose');
     await page.click('#navAlbum'); await page.waitForSelector('.skin');
