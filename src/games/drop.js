@@ -119,7 +119,12 @@
   };
   Drop.prototype.resolve = function () {
     var gs = groups(this.g);
-    if (!gs.length) { this.chain = 0; this.spawn(); return; }
+    if (!gs.length) {
+      this.chain = 0;
+      var hh = 0; for (var cc = 0; cc < COLS; cc++) { var rr0 = 0; while (rr0 < ROWS && !this.g[rr0][cc]) rr0++; hh = Math.max(hh, ROWS - rr0); }
+      if (hh >= ROWS - 3) { if (!this.hot) { this.hot = true; this.env.mistake(); } } else if (hh < ROWS - 4) this.hot = false;   // stack got dangerously high
+      this.spawn(); return;
+    }
     this.chain++;
     var cells = [], self = this;
     gs.forEach(function (grp) {
@@ -239,7 +244,7 @@
 
   Games.drop = {
     id: 'drop', name: 'Dice Drop', icon: '🎲', color: '#7c5cff', unit: 'Pieces',
-    blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.',
+    blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.', howDe: 'Ziehen = bewegen, Tippen = drehen, nach unten wischen = fallen lassen. 3 oder mehr gleiche Würfel zusammen verschwinden.',
     par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); }, timedPar: 10.6, timedSecs: 90,
     controls: [{ k: 'l', t: '◀' }, { k: 'rot', t: '⟳' }, { k: 'r', t: '▶' }, { k: 'drop', t: '⏬' }, { k: 'hint', t: '💡' }],
     create: function (env) { return new Drop(env); }

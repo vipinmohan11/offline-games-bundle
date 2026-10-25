@@ -106,7 +106,7 @@ section('3. Rewards ledger');
     if (l % 5 === 0) { ok(r.chest && r.chest.coins === Prog.chestCoins(l), 'chest on L' + l); chests++; ok(r.chest.sticker != null, 'chest gives a sticker L' + l); }
     else ok(!r.chest, 'no chest on L' + l);
   }
-  ok(chests === 8, '8 chests per game');
+  ok(chests === L / 5, L / 5 + ' chests per game');
   ok(Prog.chestCoins(40) > Prog.chestCoins(5), 'later chests pay more');
   const again = Prog.applyLevel(s2, G, 5, 999, 1, rng); ok(!again.chest, 'chest only once per level');
   ok(new Set(s2.stickers).size === s2.stickers.length, 'no duplicate stickers');
@@ -199,6 +199,33 @@ for (const id of ORDER) {
 }
 console.log('  TOTAL about ' + grand.toFixed(1) + ' hours for all eight games, before retries, timed mode and 3-star runs');
 ok(grand >= 5, 'bundle gives at least 5 hours');
+
+  // 7. Endless ladder, style, stamps, tokens, challenge, boss
+  console.log('\n7. Endless ladder and mastery rewards');
+  let mono = true;
+  for (let l = 2; l <= L; l++) {
+    if (!(Prog.f1(l) > Prog.f1(l - 1))) mono = false;
+    if (!(Prog.rho(l) >= Prog.rho(l - 1))) mono = false;
+    if (!(Prog.D(l) >= Prog.D(l - 1))) mono = false;
+    if (!(Prog.allowedMistakes(l) <= Prog.allowedMistakes(l - 1))) mono = false;
+  }
+  ok(mono, 'f1, rho, D rise and mistake allowance never grows, L1..L' + L);
+  ok(Math.abs(Prog.f1(41) - Prog.f1(40)) < 0.06, 'no jump in goal at the Level 40/41 seam');
+  ok(Prog.rho(L) <= 1.25 && Prog.pTarget(40) < 0.35 && Prog.pTarget(1) > 0.9, 'pace pressure capped; pass-rate target 95% -> ~30%');
+  ok(Prog.allowedMistakes(1) === 5 && Prog.allowedMistakes(40) === 2, 'mistake allowance 5 -> 2');
+  ok(Prog.styleOf(0, 5, 1, 1) === 100 && Prog.styleOf(5, 5, 1, 1) < 55, 'style score bounds');
+  const s3 = Prog.newSave(), rg = () => 0.3;
+  let r1 = Prog.applyLevel(s3, Games.drop, 10, 99999, 3, rg, { perfect: true, style: 95 });
+  ok(r1.stamp === 15 && r1.boss && r1.chest && s3.tokens === 1, 'L10: gold stamp 15 coins, boss sticker, chest, 1 token');
+  let r2 = Prog.applyLevel(s3, Games.drop, 10, 99999, 3, rg, { perfect: true, style: 95 });
+  ok(r2.stamp === 0 && !r2.boss && !r2.chest && s3.tokens === 1, 'stamp, boss, chest and token pay once only');
+  const s4 = Prog.newSave(); s4.tokens = 1; s4.tokens--;
+  let r3 = Prog.applyLevel(s4, Games.drop, 3, 99999, 3, rg, { challenge: true });
+  ok(r3.coins >= 2 * Prog.coinsForStars(3, 0, 3) && s4.tokens === 1, 'star challenge win: double star coins, token back');
+  const s5 = Prog.newSave(); s5.tokens = 0;
+  let r4 = Prog.applyLevel(s5, Games.drop, 3, 1, 0, rg, { challenge: true });
+  ok(r4.tokenLost === 1 && s5.coins === 0 && s5.stars.drop === undefined || r4.coins === 0, 'star challenge loss costs only the token');
+  ok(r4.xp > 0 && r4.xp < 20, 'failed run still earns some XP (25%)');
 
 console.log('\n' + checks + ' checks, ' + fails + ' failed');
 process.exit(fails ? 1 : 0);

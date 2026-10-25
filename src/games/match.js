@@ -82,7 +82,7 @@
   Match.prototype.trySwap = function (a, b) {
     if (this.state !== 'idle' || this.env.over) return false;
     if (!this.adjacent(a, b)) return false;
-    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); return false; }
+    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); this.env.mistake(); return false; }
     this.swapCells(this.g, a, b);
     this.swapA = [a, b]; this.chain = 0; this.sel = null; this.hintM = null;
     if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
@@ -249,7 +249,7 @@
 
   Games.match = {
     id: 'match', name: 'Dice Match', icon: '💎', color: '#f06595', unit: 'Moves',
-    blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.',
+    blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.', howDe: 'Tausche zwei Nachbarn, bis 3 oder mehr gleiche in einer Reihe sind. 4 machen eine Bombe, 5 einen Regenbogen-Würfel.',
     par: 78, budget: function () { return 28; }, timedPar: 32, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Match(env); }

@@ -88,6 +88,7 @@
     if (this.env.over || this.busy > 0) return false;
     var r = this.landRow(this.g, c);
     if (r < 0) return false;
+    if (r <= 1) this.env.mistake();                                    // dropping onto a nearly full column
     var v = this.cur;
     this.g[r][c] = v;
     var res = this.resolve(this.g, r, c), self = this, s = this.cell;
@@ -175,7 +176,7 @@
 
   Games.garden = {
     id: 'garden', name: 'Dice Garden', icon: '🌸', color: '#40c057', unit: 'Drops',
-    blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.',
+    blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.', howDe: 'Ziehe über eine Spalte und lass los. 3 gleiche Würfel werden zur nächsten Zahl. Drei Fünfen lassen eine Blume blühen.',
     par: 21, budget: function (l) { return 30 + Math.floor(l * 0.7); }, timedPar: 5.4, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Garden(env); }

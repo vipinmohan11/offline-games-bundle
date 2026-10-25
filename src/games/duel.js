@@ -78,6 +78,7 @@
   Duel.prototype.play = function (i, who) {
     if (this.state !== 'play' || this.turn !== who || this.b[i].o) return false;
     var fl = place(this.b, i, who, this.die), s = this.cell;
+    if (who === ME && !fl.length) this.env.mistake();                 // a move that flips nothing
     this.flip = {}; fl.forEach(function (q) { this.flip[q] = 0.5; }, this);
     this.hint = null;
     this.env.sfx(fl.length ? 'combo' : 'thud');
@@ -187,7 +188,7 @@
 
   Games.duel = {
     id: 'duel', name: 'Dice Duel', icon: '⚔️', color: '#e64980', unit: 'Rounds', noMeter: true,
-    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.',
+    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
     par: 1, budget: function () { return 3; }, timedPar: 3.8, timedSecs: 120,
     thresholds: function () { return [1, 2, 3]; },
     stars: function (l, r) {

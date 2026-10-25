@@ -6,9 +6,9 @@
     var l = env.level, T = env.timed;
     this.env = env;
     this.drops = T ? Infinity : env.budget;
-    this.speed0 = T ? 0.6 : 0.4 + 0.022 * l;                  // screen widths per second
+    this.speed0 = T ? 0.6 : Math.min(1.3, 0.4 + 0.022 * l);                  // screen widths per second
     this.w0f = T ? 0.5 : Math.max(0.26, 0.58 - 0.0075 * l);
-    this.win = T ? 0.03 : 0.052 - 0.00085 * l;                // perfect window in seconds (tightens every level)
+    this.win = T ? 0.03 : Math.max(0.014, 0.052 - 0.00085 * l);                // perfect window in seconds (tightens every level)
     this.blocks = []; this.debris = []; this.n = 0; this.streak = 0; this.phase = 0; this.dir = 1; this.botTarget = null; this.dropped = false;
     this.env.setLeft(this.drops);
   }
@@ -45,7 +45,7 @@
       nx = Math.max(this.mx, top.x); nw = ov;
       if (off > 0) this.debris.push({ x: top.x + top.w, w: Rr - (top.x + top.w), y: this.curY(), vy: 0, v: 2 });
       else this.debris.push({ x: this.mx, w: tl - this.mx, y: this.curY(), vy: 0, v: 5 });
-      this.streak = 0;
+      this.streak = 0; if (ov < this.mw * 0.7) this.env.mistake();      // a bad cut (lost more than 30% of the width)
       this.env.addScore(10, this.mx + this.mw / 2, this.curY() + this.camera(), '#fff');
       this.env.sfx('thud');
     }
@@ -125,7 +125,7 @@
 
   Games.tower = {
     id: 'tower', name: 'Dice Tower', icon: '🗼', color: '#339af0', unit: 'Drops',
-    blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.',
+    blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.', howDe: 'Tippe, um den Würfel fallen zu lassen. Triff genau, dann bleibt er breit und du bekommst eine Serie.',
     par: 28, budget: function (l) { return 50 + 2 * l; }, timedPar: 11, timedSecs: 60,
     controls: [{ k: 'drop', t: '⬇ DROP' }],
     create: function (env) { return new Tower(env); }

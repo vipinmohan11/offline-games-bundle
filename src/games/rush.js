@@ -40,7 +40,7 @@
     this.items.forEach(function (it) { var n = RULES[r].n; while (it.d.length < n) it.d.push(1 + Math.floor(this.env.rnd() * 6)); it.d.length = n; }, this);
   };
   Rush.prototype.lose = function (why) {
-    this.lives--; this.streak = 0; this.env.sfx('bad'); this.flash = { t: 0.35, ok: false };
+    this.lives--; this.streak = 0; this.env.sfx('bad'); this.env.mistake(); this.flash = { t: 0.35, ok: false };
     if (this.lives <= 0) this.env.finish({ lives: true });
   };
   Rush.prototype.sort = function (bin) {
@@ -147,7 +147,7 @@
 
   Games.rush = {
     id: 'rush', name: 'Dice Rush', icon: '⚡', color: '#fab005', unit: 'Dice',
-    blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!',
+    blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!', howDe: 'Tippe den Behälter, der zum vordersten Würfel passt. Serien geben mehr Punkte. Nur 3 Herzen!',
     par: 41, budget: function (l) { return 50 + Math.floor(l * 1.6); }, timedPar: 35, timedSecs: 60,
     controls: [],
     create: function (env) { return new Rush(env); }

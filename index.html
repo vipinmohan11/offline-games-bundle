@@ -142,14 +142,30 @@ h3{margin:14px 2px 8px}
 /* Progression: levels, stars, coins, XP, ranks, chests, stickers, timed medals.
    Pure functions over a save object so they can be tested in Node. */
 var Prog = (function () {
-  var LEVELS = 40;
+  var LEVELS = 50;               // 1-40 guided path, 41-50 Endless Ladder
+  var GUIDED = 40;
   var STAR_GAP = 0.20;
   var MEDAL_MULT = [0.5, 1.0, 1.6];       // bronze, silver, gold as multiples of timedPar * timedSecs
   var MEDAL_COINS = [15, 30, 60];
   var STICKER_COUNT = 64;
 
   // Share of "par" a player must score for 1 star on a level. Rises every level: 0.25 -> 0.85
-  function f1(l) { return 0.25 + 0.60 * (l - 1) / (LEVELS - 1); }
+  function f1(l) {
+    if (l <= GUIDED) return 0.25 + 0.60 * (l - 1) / (GUIDED - 1);
+    return 0.85 + 0.25 * Math.log(1 + (l - GUIDED) / 8);          // Endless Ladder: slow, never a jump
+  }
+  // Difficulty index 0..1 (1 = Level 40 and beyond), pace pressure, target pass rate, mistake allowance
+  function D(l) { return Math.pow((Math.min(l, GUIDED) - 1) / (GUIDED - 1), 0.85); }
+  function rho(l) { return l <= GUIDED ? 0.55 + 0.55 * D(l) : Math.min(1.25, 1.10 + 0.05 * Math.log(1 + (l - GUIDED) / 10)); }
+  function pTarget(l) { return 0.95 - 0.65 * Math.pow(D(l), 1.2) - (isBoss(l) ? 0.10 : 0); }
+  function allowedMistakes(l) { return Math.round(5 - 3 * D(l)); }
+  function isBoss(l) { return l % 10 === 0; }
+  // Style 0..100 = accuracy, goal progress, streak. Stars never use it (they stay on the Base score).
+  function styleOf(mistakes, allowed, goal, streakFrac) {
+    var acc = Math.max(0, 1 - mistakes / Math.max(1, allowed));
+    return Math.round(100 * (0.5 * acc + 0.3 * Math.max(0, Math.min(1, goal)) + 0.2 * Math.max(0, Math.min(1, streakFrac))));
+  }
+  function styleRank(s) { return s >= 90 ? 'S' : s >= 75 ? 'A' : s >= 55 ? 'B' : 'C'; }
 
   function thresholds(G, l) {
     if (G.thresholds) return G.thresholds(l);
@@ -170,7 +186,7 @@ var Prog = (function () {
   }
 
   function newSave() {
-    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [],
+    return { v: 1, coins: 0, xp: 0, stars: {}, best: {}, timed: {}, chests: {}, stickers: [], stamps: {}, bosses: {}, tokens: 0,
       skin: 0, skins: [0], gift: { last: '', streak: 0 }, sound: true, flowers: 0, plays: 0, seen: {} };
   }
   function rankOf(xp) {
@@ -215,14 +231,19 @@ var Prog = (function () {
   }
 
   // Apply the result of a finished level. Mutates save, returns a summary for the result screen.
-  function applyLevel(save, G, l, score, stars, rng) {
+  function applyLevel(save, G, l, score, stars, rng, opts) {
+    opts = opts || {};
     var g = G.id;
-    var res = { coins: 0, rankCoins: 0, xp: 0, stars: stars, oldStars: 0, chest: null, ranks: [], unlocked: null, newBest: false };
+    var res = { coins: 0, rankCoins: 0, xp: 0, stars: stars, oldStars: 0, chest: null, ranks: [], unlocked: null, newBest: false, stamp: 0, token: 0, tokenLost: 0, boss: null, challenge: !!opts.challenge, style: opts.style || 0 };
     var st = save.stars[g] = save.stars[g] || {};
     var old = st[l] || 0;
     res.oldStars = old;
     save.plays++;
-    if (stars > old) { res.coins += coinsForStars(l, old, stars); st[l] = stars; }
+    if (stars > old) {
+      var sc = coinsForStars(l, old, stars);
+      res.coins += sc; st[l] = stars;
+      if (opts.challenge && stars === 3) { res.coins += sc; }                // Star Challenge: double star coins, first time only
+    }
     else if (stars >= 1) res.coins += 1;
     var bk = g + ':' + l;
     if (score > (save.best[bk] || 0)) { save.best[bk] = score; res.newBest = true; }
@@ -232,9 +253,21 @@ var Prog = (function () {
       var cc = chestCoins(l);
       res.chest = { coins: cc, sticker: giveSticker(save, rng) };
       res.coins += cc;
+      save.tokens = (save.tokens || 0) + 1; res.token += 1;                  // Courage Tokens come from chests only
+    }
+    if (stars >= 1 && isBoss(l) && !(save.bosses = save.bosses || {})[bk]) {
+      save.bosses[bk] = 1; res.boss = { sticker: giveSticker(save, rng) };   // boss badge + sticker, first win only
+    }
+    var stampMap = save.stamps = save.stamps || {};
+    if (opts.perfect && stars === 3 && !(stampMap[g] = stampMap[g] || {})[l]) {
+      stampMap[g][l] = 1; res.stamp = 10 + Math.floor(l / 2); res.coins += res.stamp;   // Gold Stamp, first time only
+    }
+    if (opts.challenge) {
+      if (stars === 3) { save.tokens = (save.tokens || 0) + 1; res.token += 1; } else res.tokenLost = 1;
     }
     save.coins += res.coins;
-    var xp = stars >= 1 ? 8 + 12 * stars + Math.floor(score / 60) : 3 + Math.floor(score / 120);
+    var xp = stars >= 1 ? 8 + 12 * stars + Math.floor(score / 60) : Math.round(0.25 * (20 + Math.floor(score / 60)));   // a failed run still pays 25%
+    if (stars >= 1 && opts.style >= 90) xp = Math.round(xp * 1.2);
     addXp(save, xp, rng, res);
     return res;
   }
@@ -270,7 +303,7 @@ var Prog = (function () {
   }
 
   return { LEVELS: LEVELS, STAR_GAP: STAR_GAP, MEDAL_MULT: MEDAL_MULT, MEDAL_COINS: MEDAL_COINS, STICKER_COUNT: STICKER_COUNT,
-    f1: f1, thresholds: thresholds, starsFor: starsFor, timedThr: timedThr, medalFor: medalFor,
+    f1: f1, D: D, rho: rho, pTarget: pTarget, allowedMistakes: allowedMistakes, isBoss: isBoss, styleOf: styleOf, styleRank: styleRank, GUIDED: GUIDED, thresholds: thresholds, starsFor: starsFor, timedThr: timedThr, medalFor: medalFor,
     newSave: newSave, rankOf: rankOf, isUnlocked: isUnlocked, totalStars: totalStars,
     coinsForStars: coinsForStars, chestCoins: chestCoins, applyLevel: applyLevel, applyTimed: applyTimed,
     giftReady: giftReady, claimGift: claimGift };
@@ -354,6 +387,7 @@ function Run(G, level, timed, seed, ui, skill) {
   this.rnd = mulberry(seed || 1);
   this.skill = skill || { eps: 0, tempo: 0.15, noise: 1 };
   this.score = 0; this.t = 0; this.over = false; this.result = null;
+  this.mistakes = 0; this.acts = 0; this.run = 0; this.bestRun = 0; this.helper = false;
   this.W = 360; this.H = 560;
   this.budget = this.timed ? Infinity : G.budget(level);
   this.left = this.budget;
@@ -365,9 +399,10 @@ function Run(G, level, timed, seed, ui, skill) {
 Run.prototype.resize = function (w, h) { this.W = w; this.H = h; this.game.resize(w, h); };
 Run.prototype.addScore = function (n, x, y, color) {
   n = Math.round(n); if (n <= 0) return;
-  this.score += n;
+  this.score += n; this.acts++; if (++this.run > this.bestRun) this.bestRun = this.run;
   if (this.ui) this.ui.fx(x, y, '+' + n, color);
 };
+Run.prototype.mistake = function (n) { this.mistakes += (n || 1); this.run = 0; this.acts++; };
 Run.prototype.setLeft = function (n) { this.left = n; };
 Run.prototype.sfx = function (k) { if (this.ui) this.ui.sfx(k); };
 Run.prototype.burst = function (x, y, color, n) { if (this.ui) this.ui.burst(x, y, color, n); };
@@ -377,7 +412,11 @@ Run.prototype.finish = function (info) {
   this.over = true;
   info = info || {}; info.score = this.score;
   var stars = this.timed ? Prog.medalFor(this.G, this.score) : Prog.starsFor(this.G, this.level, this.score, info);
-  this.result = { score: this.score, stars: stars, info: info };
+  var allowed = Prog.allowedMistakes(this.level), goal = this.thr && this.thr[2] ? this.score / this.thr[2] : 0;
+  if (this.G.stars && !this.timed) goal = stars / 3;
+  var style = Prog.styleOf(this.mistakes, allowed, goal, this.bestRun / Math.max(1, this.acts));
+  this.result = { score: this.score, stars: stars, info: info, mistakes: this.mistakes, style: style,
+    perfect: !this.timed && stars === 3 && this.mistakes === 0 && style >= 90 && !this.helper };
 };
 Run.prototype.step = function (dt) {
   if (this.over) return;
@@ -525,7 +564,12 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   };
   Drop.prototype.resolve = function () {
     var gs = groups(this.g);
-    if (!gs.length) { this.chain = 0; this.spawn(); return; }
+    if (!gs.length) {
+      this.chain = 0;
+      var hh = 0; for (var cc = 0; cc < COLS; cc++) { var rr0 = 0; while (rr0 < ROWS && !this.g[rr0][cc]) rr0++; hh = Math.max(hh, ROWS - rr0); }
+      if (hh >= ROWS - 3) { if (!this.hot) { this.hot = true; this.env.mistake(); } } else if (hh < ROWS - 4) this.hot = false;   // stack got dangerously high
+      this.spawn(); return;
+    }
     this.chain++;
     var cells = [], self = this;
     gs.forEach(function (grp) {
@@ -645,7 +689,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.drop = {
     id: 'drop', name: 'Dice Drop', icon: '🎲', color: '#7c5cff', unit: 'Pieces',
-    blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.',
+    blurb: 'Stack joined dice. Match 3 to pop!', how: 'Drag to move, tap to turn, swipe down to drop. 3+ touching dice with the same face pop.', howDe: 'Ziehen = bewegen, Tippen = drehen, nach unten wischen = fallen lassen. 3 oder mehr gleiche Würfel zusammen verschwinden.',
     par: 26, budget: function (l) { return 30 + Math.floor(l * 0.8); }, timedPar: 10.6, timedSecs: 90,
     controls: [{ k: 'l', t: '◀' }, { k: 'rot', t: '⟳' }, { k: 'r', t: '▶' }, { k: 'drop', t: '⏬' }, { k: 'hint', t: '💡' }],
     create: function (env) { return new Drop(env); }
@@ -743,6 +787,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var p = this.tray[idx];
     if (!p || !this.canPlace(p.cells, x, y)) return false;
     var s = this.cell, ox = this.ox, oy = this.oy;
+    var fitBefore = this.tray.map(function (q, k) { return q && k !== idx && this.pieceFits(q); }, this);
     var res = this.apply(this.g, p.cells, x, y, this.streak);
     this.streak = res.lines ? this.streak + 1 : 0;
     this.placed++;
@@ -756,6 +801,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.hint = null;
     this.env.setLeft(this.env.budget - this.placed);
     if (!this.env.timed && this.placed >= this.env.budget) { this.env.finish({ done: true }); return true; }
+    if (this.tray.some(function (q, k) { return q && fitBefore[k] && !this.pieceFits(q); }, this)) this.env.mistake();   // blocked a waiting shape
     if (this.tray.every(function (t) { return !t; })) this.refill();
     else if (!this.anyFits()) this.env.finish({ stuck: true });
     return true;
@@ -877,7 +923,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.fit = {
     id: 'fit', name: 'Dice Fit', icon: '🧩', color: '#12b886', unit: 'Moves',
-    blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.',
+    blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.', howDe: 'Ziehe eine Form auf das Feld. Volle Reihen oder Spalten verschwinden.',
     par: 15, budget: function (l) { return 16 + Math.floor(l / 2); }, timedPar: 6.4, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Fit(env); }
@@ -975,6 +1021,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     if (this.env.over || this.busy > 0) return false;
     var r = this.landRow(this.g, c);
     if (r < 0) return false;
+    if (r <= 1) this.env.mistake();                                    // dropping onto a nearly full column
     var v = this.cur;
     this.g[r][c] = v;
     var res = this.resolve(this.g, r, c), self = this, s = this.cell;
@@ -1062,7 +1109,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.garden = {
     id: 'garden', name: 'Dice Garden', icon: '🌸', color: '#40c057', unit: 'Drops',
-    blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.',
+    blurb: 'Merge 3 same dice. Grow flowers!', how: 'Drag over a column and let go to drop the die. 3 touching same dice merge into the next number. Merge three 5s to bloom.', howDe: 'Ziehe über eine Spalte und lass los. 3 gleiche Würfel werden zur nächsten Zahl. Drei Fünfen lassen eine Blume blühen.',
     par: 21, budget: function (l) { return 30 + Math.floor(l * 0.7); }, timedPar: 5.4, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Garden(env); }
@@ -1154,7 +1201,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Match.prototype.trySwap = function (a, b) {
     if (this.state !== 'idle' || this.env.over) return false;
     if (!this.adjacent(a, b)) return false;
-    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); return false; }
+    if (!this.validSwap(a, b)) { this.shake = 0.25; this.env.sfx('bad'); this.env.mistake(); return false; }
     this.swapCells(this.g, a, b);
     this.swapA = [a, b]; this.chain = 0; this.sel = null; this.hintM = null;
     if (this.moves !== Infinity) { this.moves--; this.env.setLeft(this.moves); }
@@ -1321,7 +1368,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.match = {
     id: 'match', name: 'Dice Match', icon: '💎', color: '#f06595', unit: 'Moves',
-    blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.',
+    blurb: 'Swap dice, match 3, make bombs!', how: 'Swap two neighbours to line up 3 or more same dice. 4 in a row makes a bomb, 5 makes a rainbow die.', howDe: 'Tausche zwei Nachbarn, bis 3 oder mehr gleiche in einer Reihe sind. 4 machen eine Bombe, 5 einen Regenbogen-Würfel.',
     par: 78, budget: function () { return 28; }, timedPar: 32, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Match(env); }
@@ -1462,7 +1509,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     for (var r = ROWS - 1; r > 0; r--) this.g[r] = this.g[r - 1];
     this.g[0] = new Array(COLS).fill(0);
     for (var c = 0; c < COLS; c++) this.g[0][c] = 1 + Math.floor(this.env.rnd() * this.nv);
-    this.env.say('Ceiling drops!'); this.env.sfx('bad');
+    this.env.say('Ceiling drops!'); this.env.sfx('bad'); this.env.mistake();
   };
   Shot.prototype.update = function (dt) {
     if (this.cool > 0) this.cool -= dt;
@@ -1535,7 +1582,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.shot = {
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
-    blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.',
+    blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
     par: 38, budget: function (l) { return 22 + Math.floor(l / 2); }, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }
@@ -1585,7 +1632,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     this.items.forEach(function (it) { var n = RULES[r].n; while (it.d.length < n) it.d.push(1 + Math.floor(this.env.rnd() * 6)); it.d.length = n; }, this);
   };
   Rush.prototype.lose = function (why) {
-    this.lives--; this.streak = 0; this.env.sfx('bad'); this.flash = { t: 0.35, ok: false };
+    this.lives--; this.streak = 0; this.env.sfx('bad'); this.env.mistake(); this.flash = { t: 0.35, ok: false };
     if (this.lives <= 0) this.env.finish({ lives: true });
   };
   Rush.prototype.sort = function (bin) {
@@ -1692,7 +1739,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.rush = {
     id: 'rush', name: 'Dice Rush', icon: '⚡', color: '#fab005', unit: 'Dice',
-    blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!',
+    blurb: 'Sort fast! It speeds up!', how: 'Tap the bin that matches the front die. Streaks multiply your points. 3 hearts only!', howDe: 'Tippe den Behälter, der zum vordersten Würfel passt. Serien geben mehr Punkte. Nur 3 Herzen!',
     par: 41, budget: function (l) { return 50 + Math.floor(l * 1.6); }, timedPar: 35, timedSecs: 60,
     controls: [],
     create: function (env) { return new Rush(env); }
@@ -1708,9 +1755,9 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var l = env.level, T = env.timed;
     this.env = env;
     this.drops = T ? Infinity : env.budget;
-    this.speed0 = T ? 0.6 : 0.4 + 0.022 * l;                  // screen widths per second
+    this.speed0 = T ? 0.6 : Math.min(1.3, 0.4 + 0.022 * l);                  // screen widths per second
     this.w0f = T ? 0.5 : Math.max(0.26, 0.58 - 0.0075 * l);
-    this.win = T ? 0.03 : 0.052 - 0.00085 * l;                // perfect window in seconds (tightens every level)
+    this.win = T ? 0.03 : Math.max(0.014, 0.052 - 0.00085 * l);                // perfect window in seconds (tightens every level)
     this.blocks = []; this.debris = []; this.n = 0; this.streak = 0; this.phase = 0; this.dir = 1; this.botTarget = null; this.dropped = false;
     this.env.setLeft(this.drops);
   }
@@ -1747,7 +1794,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       nx = Math.max(this.mx, top.x); nw = ov;
       if (off > 0) this.debris.push({ x: top.x + top.w, w: Rr - (top.x + top.w), y: this.curY(), vy: 0, v: 2 });
       else this.debris.push({ x: this.mx, w: tl - this.mx, y: this.curY(), vy: 0, v: 5 });
-      this.streak = 0;
+      this.streak = 0; if (ov < this.mw * 0.7) this.env.mistake();      // a bad cut (lost more than 30% of the width)
       this.env.addScore(10, this.mx + this.mw / 2, this.curY() + this.camera(), '#fff');
       this.env.sfx('thud');
     }
@@ -1827,7 +1874,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.tower = {
     id: 'tower', name: 'Dice Tower', icon: '🗼', color: '#339af0', unit: 'Drops',
-    blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.',
+    blurb: 'Tap to stack. Be perfect!', how: 'Tap to drop the swinging dice onto the tower. Line it up perfectly to keep your width and build a streak.', howDe: 'Tippe, um den Würfel fallen zu lassen. Triff genau, dann bleibt er breit und du bekommst eine Serie.',
     par: 28, budget: function (l) { return 50 + 2 * l; }, timedPar: 11, timedSecs: 60,
     controls: [{ k: 'drop', t: '⬇ DROP' }],
     create: function (env) { return new Tower(env); }
@@ -1915,6 +1962,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
   Duel.prototype.play = function (i, who) {
     if (this.state !== 'play' || this.turn !== who || this.b[i].o) return false;
     var fl = place(this.b, i, who, this.die), s = this.cell;
+    if (who === ME && !fl.length) this.env.mistake();                 // a move that flips nothing
     this.flip = {}; fl.forEach(function (q) { this.flip[q] = 0.5; }, this);
     this.hint = null;
     this.env.sfx(fl.length ? 'combo' : 'thud');
@@ -2024,7 +2072,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
 
   Games.duel = {
     id: 'duel', name: 'Dice Duel', icon: '⚔️', color: '#e64980', unit: 'Rounds', noMeter: true,
-    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.',
+    blurb: 'Beat the computer, best of 3!', how: 'Roll, then tap a square. A bigger die flips smaller enemy dice next to it. Biggest pip total at the end wins the round.', howDe: 'Würfeln, dann ein Feld antippen. Ein größerer Würfel dreht kleinere Würfel des Gegners um. Wer am Ende mehr Augen hat, gewinnt.',
     par: 1, budget: function () { return 3; }, timedPar: 3.8, timedSecs: 120,
     thresholds: function () { return [1, 2, 3]; },
     stars: function (l, r) {
@@ -2121,7 +2169,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     curGame = id; G = Games[id];
     $('#levels').style.setProperty('--c', G.color);
     $('#lvTitle').textContent = G.icon + ' ' + G.name;
-    $('#lvHow').textContent = G.how;
+    $('#lvHow').innerHTML = G.how + '<br><i>' + G.howDe + '</i>';
     $('#tabLv').style.setProperty('--c', G.color); $('#tabTm').style.setProperty('--c', G.color);
     renderLevels('lv'); show('levels');
   }
@@ -2136,10 +2184,13 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       h += '<div class="lvgrid">';
       for (i = 1; i <= Prog.LEVELS; i++) {
         var ok = Prog.isUnlocked(save, id, i), st = (save.stars[id] || {})[i] || 0;
+        if (i === Prog.GUIDED + 1) h += '</div><p class="note">🏁 Endless Ladder: levels ' + i + '–' + Prog.LEVELS + ' get slowly harder.</p><div class="lvgrid">';
         h += '<button class="lv ' + (ok ? '' : 'lock') + (i === cur ? ' cur' : '') + '" data-l="' + i + '"' + (ok ? '' : ' data-lock="1"') + '>' +
-          (i % 5 === 0 ? '<span class="ch">🎁</span>' : '') + '<b>' + (ok ? i : '🔒') + '</b><small>' + (ok ? '⭐'.repeat(st) + '<i style="opacity:.35;font-style:normal">' + '⭐'.repeat(3 - st) + '</i>' : '') + '</small></button>';
+          (i % 5 === 0 ? '<span class="ch">' + (Prog.isBoss(i) ? '👑' : '🎁') + '</span>' : '') + ((save.stamps[id] || {})[i] ? '<span class="ch" style="left:4px;right:auto">💎</span>' : '') + '<b>' + (ok ? i : '🔒') + '</b><small>' + (ok ? '⭐'.repeat(st) + '<i style="opacity:.35;font-style:normal">' + '⭐'.repeat(3 - st) + '</i>' : '') + '</small></button>';
       }
-      h += '</div><div class="btns"><button class="pri" id="goCur">▶ Play level ' + cur + '</button></div>';
+      h += '</div><p class="note">👑 boss level every 10th (extra sticker) · 💎 Gold Stamp = 3★ with no mistakes · 🎁 chest every 5th gives a 🎖 token</p>';
+      h += '<label class="how" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="chal" style="width:22px;height:22px"' + (save.tokens > 0 ? '' : ' disabled') + '> <span>⚔ Star Challenge: win 3★ for double coins. Uses 1 🎖 token (you have ' + (save.tokens || 0) + '). Lose and only the token is gone.<br><i>Mut-Herausforderung: 3 Sterne = doppelte Münzen. Verlierst du, ist nur der Chip weg.</i></span></label>';
+      h += '<div class="btns"><button class="pri" id="goCur">▶ Play level ' + cur + '</button></div>';
     } else {
       var t = save.timed[id] || { medal: 0, best: 0 }, th = Prog.timedThr(G);
       h += '<div class="how"><b>⏱ Timed: ' + G.timedSecs + ' seconds.</b> Score as much as you can. It gets faster as you go!</div>';
@@ -2182,12 +2233,14 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     say: function (s) { var e = $('#say'); e.textContent = s; e.classList.remove('go'); void e.offsetWidth; e.classList.add('go'); clearTimeout(sayT); sayT = setTimeout(function () { e.classList.remove('go'); e.textContent = ''; }, 1150); }
   };
 
-  function startRun(id, level, timed) {
+  function startRun(id, level, timed, wantChal) {
     closeModal();
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
+    run.challenge = false;
+    if (wantChal && !timed && save.tokens > 0) { save.tokens--; run.challenge = true; persist(); }
     fx = []; parts = []; paused = false; overT = 0; clearTimeout(sayT); $('#say').classList.remove('go'); $('#say').textContent = '';
-    $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : 'Level ' + level);
+    $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : (Prog.isBoss(level) ? '👑 Boss ' : '') + 'Level ' + level) + (run.challenge ? ' ⚔' : '');
     buildMeter();
     var c = $('#ctl'); c.innerHTML = '';
     c.classList.toggle('none', !G.controls.length);
@@ -2198,7 +2251,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
       c.appendChild(e);
     });
     show('play'); fitCanvas(); updateHud();
-    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '</p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
+    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
 
@@ -2258,7 +2311,7 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     var res = run.result, out, lvl = run.level, timed = run.timed, rnd = Math.random;
     if (run.flowers) save.flowers += run.flowers;
     if (timed) out = Prog.applyTimed(save, G, res.score, rnd);
-    else out = Prog.applyLevel(save, G, lvl, res.score, res.stars, rnd);
+    else out = Prog.applyLevel(save, G, lvl, res.score, res.stars, rnd, { style: res.style, perfect: res.perfect, challenge: run.challenge });
     persist();
     showResult(out, res, lvl, timed);
   }
@@ -2273,10 +2326,15 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     h += '<div class="sub">' + (out.newBest ? '🎉 New best!' : 'Best ' + fmt(best)) + '</div>';
     if (G.noMeter && !timed) h += '<div class="thr">' + G.starHelp(lvl) + '</div>';
     else h += '<div class="thr">' + th.map(function (t, k) { return (timed ? ['🥉', '🥈', '🥇'][k] : '⭐'.repeat(k + 1)) + ' ' + fmt(t); }).join('<span>·</span>') + '</div>';
-    if (!won && !timed && !G.noMeter) h += '<div class="sub">You need ' + fmt(th[0] - res.score) + ' more points for 1 star.</div>';
+    if (!won && !timed && !G.noMeter) h += '<div class="sub">Almost! You need ' + fmt(th[0] - res.score) + ' more points for 1 star.</div><div class="bar"><i style="width:' + Math.min(99, Math.round(100 * res.score / th[0])) + '%"></i></div>';
+    if (!timed) h += '<div class="sub">Style <b>' + Prog.styleRank(res.style) + '</b> · ' + res.mistakes + ' mistake' + (res.mistakes === 1 ? '' : 's') + (out.challenge ? ' · ⚔ Star Challenge' : '') + '</div>';
     h += '<div class="rew"><span class="pill gold">+' + out.coins + ' 🪙</span><span class="pill">+' + out.xp + ' XP</span></div>';
     if (!timed && out.stars > out.oldStars && out.oldStars > 0) h += '<div class="sub">Improved from ' + out.oldStars + ' to ' + out.stars + ' stars!</div>';
     if (!timed && out.stars <= out.oldStars && won) h += '<div class="sub">Beat your ' + out.oldStars + '-star score to earn more coins.</div>';
+    if (out.stamp) h += '<div class="reveal"><div class="em">💎</div>Gold Stamp! Perfect run, +' + out.stamp + ' 🪙<br><small>Goldener Stempel!</small></div>';
+    if (out.boss) h += '<div class="reveal"><div class="em">👑' + (out.boss.sticker != null ? STICKERS[out.boss.sticker] : '') + '</div>Boss beaten!' + (out.boss.sticker != null ? ' New sticker!' : '') + '</div>';
+    if (out.token) h += '<div class="reveal">🎖 +' + out.token + ' Courage Token (now ' + (save.tokens || 0) + ')</div>';
+    if (out.tokenLost) h += '<div class="sub">⚔ Challenge lost: only the token is gone. Your coins and stars are safe.</div>';
     if (out.chest) h += '<div class="reveal"><div class="em">🎁' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '') + '</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
     out.ranks.forEach(function (r) { h += '<div class="reveal"><div class="em">🏅' + (r.sticker != null ? STICKERS[r.sticker] : '') + '</div>Rank up! Rank ' + r.rank + ' · ' + rankName(r.rank) + '<br>+' + r.coins + ' 🪙' + (r.sticker != null ? ' and a new sticker' : '') + '</div>'; });
     if (out.unlocked) h += '<div class="reveal">🔓 Level ' + out.unlocked + ' unlocked!</div>';
@@ -2310,9 +2368,10 @@ if (typeof module !== 'undefined') module.exports = { Games: Games, Run: Run, si
     on('#tabTm', 'click', function () { renderLevels('tm'); });
     $('#lvBody').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      if (b.id === 'goCur') startRun(curGame, topLevel(curGame), false);
+      var chal = !!($('#chal') && $('#chal').checked);
+      if (b.id === 'goCur') startRun(curGame, topLevel(curGame), false, chal);
       else if (b.id === 'goTm') startRun(curGame, 1, true);
-      else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false); }
+      else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false, chal); }
     });
     on('#gift', 'click', function () {
       var g = Prog.claimGift(save, today(), Math.random); if (!g) return;

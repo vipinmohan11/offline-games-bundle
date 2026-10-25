@@ -1,6 +1,6 @@
 # Dice Arcade
 
-Eight kid-friendly dice games in one offline web app. Pick a game from the home screen, level up, earn rewards, and try the timed mode.
+Eight kid-friendly dice games in one offline web app. How-to texts are in English and simple German. Pick a game from the home screen, level up, earn rewards, and try the timed mode.
 
 Works in any modern mobile or tablet browser (phones and 10–11" tablets, portrait or landscape). No accounts, no ads, no network use while playing.
 
@@ -19,10 +19,12 @@ Works in any modern mobile or tablet browser (phones and 10–11" tablets, portr
 
 ## Progression and rewards
 
-- 40 levels per game, each harder than the last (star goals rise every level).
+- 50 levels per game, each harder than the last: 40 guided levels, then a 10-level Endless Ladder. Star goals rise every level, with a boss level every 10th.
 - 1–3 stars per level, coins for new stars, a chest every 5th level.
 - XP and ranks, 64 stickers to collect, 8 dice skins in the shop.
 - Daily gift with a 7-day streak.
+- Style rank (S/A/B/C) for every run, and a Gold Stamp for 3 stars with no mistakes.
+- Courage Tokens from chests unlock the Star Challenge: win 3 stars for double coins, and if you lose only the token is gone.
 - Timed mode per game with bronze/silver/gold medals.
 - Progress is saved on the device (local storage).
 

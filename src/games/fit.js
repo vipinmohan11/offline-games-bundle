@@ -88,6 +88,7 @@
     var p = this.tray[idx];
     if (!p || !this.canPlace(p.cells, x, y)) return false;
     var s = this.cell, ox = this.ox, oy = this.oy;
+    var fitBefore = this.tray.map(function (q, k) { return q && k !== idx && this.pieceFits(q); }, this);
     var res = this.apply(this.g, p.cells, x, y, this.streak);
     this.streak = res.lines ? this.streak + 1 : 0;
     this.placed++;
@@ -101,6 +102,7 @@
     this.hint = null;
     this.env.setLeft(this.env.budget - this.placed);
     if (!this.env.timed && this.placed >= this.env.budget) { this.env.finish({ done: true }); return true; }
+    if (this.tray.some(function (q, k) { return q && fitBefore[k] && !this.pieceFits(q); }, this)) this.env.mistake();   // blocked a waiting shape
     if (this.tray.every(function (t) { return !t; })) this.refill();
     else if (!this.anyFits()) this.env.finish({ stuck: true });
     return true;
@@ -222,7 +224,7 @@
 
   Games.fit = {
     id: 'fit', name: 'Dice Fit', icon: '🧩', color: '#12b886', unit: 'Moves',
-    blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.',
+    blurb: 'Drag dice shapes. Fill lines to clear!', how: 'Drag a shape onto the board. Full rows or columns clear and score their dice pips.', howDe: 'Ziehe eine Form auf das Feld. Volle Reihen oder Spalten verschwinden.',
     par: 15, budget: function (l) { return 16 + Math.floor(l / 2); }, timedPar: 6.4, timedSecs: 90,
     controls: [{ k: 'hint', t: '💡 Hint' }],
     create: function (env) { return new Fit(env); }

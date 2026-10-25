@@ -131,7 +131,7 @@
     for (var r = ROWS - 1; r > 0; r--) this.g[r] = this.g[r - 1];
     this.g[0] = new Array(COLS).fill(0);
     for (var c = 0; c < COLS; c++) this.g[0][c] = 1 + Math.floor(this.env.rnd() * this.nv);
-    this.env.say('Ceiling drops!'); this.env.sfx('bad');
+    this.env.say('Ceiling drops!'); this.env.sfx('bad'); this.env.mistake();
   };
   Shot.prototype.update = function (dt) {
     if (this.cool > 0) this.cool -= dt;
@@ -204,7 +204,7 @@
 
   Games.shot = {
     id: 'shot', name: 'Dice Shot', icon: '🎯', color: '#fd7e14', unit: 'Shots',
-    blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.',
+    blurb: 'Aim and pop the dice wall!', how: 'Drag to aim, let go to fire. Same numbers pop, and so do two numbers that add to 7. Cut dice loose for bonus points.', howDe: 'Ziehen zum Zielen, loslassen zum Schießen. Gleiche Zahlen platzen, auch zwei Zahlen mit Summe 7.',
     par: 38, budget: function (l) { return 22 + Math.floor(l / 2); }, timedPar: 9, timedSecs: 90,
     controls: [{ k: 'swap', t: '🔁 Swap die' }],
     create: function (env) { return new Shot(env); }

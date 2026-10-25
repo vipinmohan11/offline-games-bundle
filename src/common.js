@@ -74,6 +74,7 @@ function Run(G, level, timed, seed, ui, skill) {
   this.rnd = mulberry(seed || 1);
   this.skill = skill || { eps: 0, tempo: 0.15, noise: 1 };
   this.score = 0; this.t = 0; this.over = false; this.result = null;
+  this.mistakes = 0; this.acts = 0; this.run = 0; this.bestRun = 0; this.helper = false;
   this.W = 360; this.H = 560;
   this.budget = this.timed ? Infinity : G.budget(level);
   this.left = this.budget;
@@ -85,9 +86,10 @@ function Run(G, level, timed, seed, ui, skill) {
 Run.prototype.resize = function (w, h) { this.W = w; this.H = h; this.game.resize(w, h); };
 Run.prototype.addScore = function (n, x, y, color) {
   n = Math.round(n); if (n <= 0) return;
-  this.score += n;
+  this.score += n; this.acts++; if (++this.run > this.bestRun) this.bestRun = this.run;
   if (this.ui) this.ui.fx(x, y, '+' + n, color);
 };
+Run.prototype.mistake = function (n) { this.mistakes += (n || 1); this.run = 0; this.acts++; };
 Run.prototype.setLeft = function (n) { this.left = n; };
 Run.prototype.sfx = function (k) { if (this.ui) this.ui.sfx(k); };
 Run.prototype.burst = function (x, y, color, n) { if (this.ui) this.ui.burst(x, y, color, n); };
@@ -97,7 +99,11 @@ Run.prototype.finish = function (info) {
   this.over = true;
   info = info || {}; info.score = this.score;
   var stars = this.timed ? Prog.medalFor(this.G, this.score) : Prog.starsFor(this.G, this.level, this.score, info);
-  this.result = { score: this.score, stars: stars, info: info };
+  var allowed = Prog.allowedMistakes(this.level), goal = this.thr && this.thr[2] ? this.score / this.thr[2] : 0;
+  if (this.G.stars && !this.timed) goal = stars / 3;
+  var style = Prog.styleOf(this.mistakes, allowed, goal, this.bestRun / Math.max(1, this.acts));
+  this.result = { score: this.score, stars: stars, info: info, mistakes: this.mistakes, style: style,
+    perfect: !this.timed && stars === 3 && this.mistakes === 0 && style >= 90 && !this.helper };
 };
 Run.prototype.step = function (dt) {
   if (this.over) return;

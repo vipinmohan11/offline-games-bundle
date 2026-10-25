@@ -79,7 +79,7 @@
     curGame = id; G = Games[id];
     $('#levels').style.setProperty('--c', G.color);
     $('#lvTitle').textContent = G.icon + ' ' + G.name;
-    $('#lvHow').textContent = G.how;
+    $('#lvHow').innerHTML = G.how + '<br><i>' + G.howDe + '</i>';
     $('#tabLv').style.setProperty('--c', G.color); $('#tabTm').style.setProperty('--c', G.color);
     renderLevels('lv'); show('levels');
   }
@@ -94,10 +94,13 @@
       h += '<div class="lvgrid">';
       for (i = 1; i <= Prog.LEVELS; i++) {
         var ok = Prog.isUnlocked(save, id, i), st = (save.stars[id] || {})[i] || 0;
+        if (i === Prog.GUIDED + 1) h += '</div><p class="note">🏁 Endless Ladder: levels ' + i + '–' + Prog.LEVELS + ' get slowly harder.</p><div class="lvgrid">';
         h += '<button class="lv ' + (ok ? '' : 'lock') + (i === cur ? ' cur' : '') + '" data-l="' + i + '"' + (ok ? '' : ' data-lock="1"') + '>' +
-          (i % 5 === 0 ? '<span class="ch">🎁</span>' : '') + '<b>' + (ok ? i : '🔒') + '</b><small>' + (ok ? '⭐'.repeat(st) + '<i style="opacity:.35;font-style:normal">' + '⭐'.repeat(3 - st) + '</i>' : '') + '</small></button>';
+          (i % 5 === 0 ? '<span class="ch">' + (Prog.isBoss(i) ? '👑' : '🎁') + '</span>' : '') + ((save.stamps[id] || {})[i] ? '<span class="ch" style="left:4px;right:auto">💎</span>' : '') + '<b>' + (ok ? i : '🔒') + '</b><small>' + (ok ? '⭐'.repeat(st) + '<i style="opacity:.35;font-style:normal">' + '⭐'.repeat(3 - st) + '</i>' : '') + '</small></button>';
       }
-      h += '</div><div class="btns"><button class="pri" id="goCur">▶ Play level ' + cur + '</button></div>';
+      h += '</div><p class="note">👑 boss level every 10th (extra sticker) · 💎 Gold Stamp = 3★ with no mistakes · 🎁 chest every 5th gives a 🎖 token</p>';
+      h += '<label class="how" style="display:flex;gap:10px;align-items:center"><input type="checkbox" id="chal" style="width:22px;height:22px"' + (save.tokens > 0 ? '' : ' disabled') + '> <span>⚔ Star Challenge: win 3★ for double coins. Uses 1 🎖 token (you have ' + (save.tokens || 0) + '). Lose and only the token is gone.<br><i>Mut-Herausforderung: 3 Sterne = doppelte Münzen. Verlierst du, ist nur der Chip weg.</i></span></label>';
+      h += '<div class="btns"><button class="pri" id="goCur">▶ Play level ' + cur + '</button></div>';
     } else {
       var t = save.timed[id] || { medal: 0, best: 0 }, th = Prog.timedThr(G);
       h += '<div class="how"><b>⏱ Timed: ' + G.timedSecs + ' seconds.</b> Score as much as you can. It gets faster as you go!</div>';
@@ -140,12 +143,14 @@
     say: function (s) { var e = $('#say'); e.textContent = s; e.classList.remove('go'); void e.offsetWidth; e.classList.add('go'); clearTimeout(sayT); sayT = setTimeout(function () { e.classList.remove('go'); e.textContent = ''; }, 1150); }
   };
 
-  function startRun(id, level, timed) {
+  function startRun(id, level, timed, wantChal) {
     closeModal();
     G = Games[id]; curGame = id;
     run = new Run(G, level, timed, (Math.random() * 2147483647) | 0, ui, { eps: 0, tempo: 0.15, noise: 1 });
+    run.challenge = false;
+    if (wantChal && !timed && save.tokens > 0) { save.tokens--; run.challenge = true; persist(); }
     fx = []; parts = []; paused = false; overT = 0; clearTimeout(sayT); $('#say').classList.remove('go'); $('#say').textContent = '';
-    $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : 'Level ' + level);
+    $('#hudTitle').textContent = G.icon + ' ' + G.name + ' · ' + (timed ? 'Timed' : (Prog.isBoss(level) ? '👑 Boss ' : '') + 'Level ' + level) + (run.challenge ? ' ⚔' : '');
     buildMeter();
     var c = $('#ctl'); c.innerHTML = '';
     c.classList.toggle('none', !G.controls.length);
@@ -156,7 +161,7 @@
       c.appendChild(e);
     });
     show('play'); fitCanvas(); updateHud();
-    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '</p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
+    if (!save.seen[id]) { save.seen[id] = 1; persist(); paused = true; modal('<h2>' + G.icon + ' ' + G.name + '</h2><p class="sub">' + G.how + '<br><i>' + G.howDe + '</i></p><div class="btns"><button class="pri" id="mGo">Let\'s go!</button></div>'); }
     last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   }
 
@@ -216,7 +221,7 @@
     var res = run.result, out, lvl = run.level, timed = run.timed, rnd = Math.random;
     if (run.flowers) save.flowers += run.flowers;
     if (timed) out = Prog.applyTimed(save, G, res.score, rnd);
-    else out = Prog.applyLevel(save, G, lvl, res.score, res.stars, rnd);
+    else out = Prog.applyLevel(save, G, lvl, res.score, res.stars, rnd, { style: res.style, perfect: res.perfect, challenge: run.challenge });
     persist();
     showResult(out, res, lvl, timed);
   }
@@ -231,10 +236,15 @@
     h += '<div class="sub">' + (out.newBest ? '🎉 New best!' : 'Best ' + fmt(best)) + '</div>';
     if (G.noMeter && !timed) h += '<div class="thr">' + G.starHelp(lvl) + '</div>';
     else h += '<div class="thr">' + th.map(function (t, k) { return (timed ? ['🥉', '🥈', '🥇'][k] : '⭐'.repeat(k + 1)) + ' ' + fmt(t); }).join('<span>·</span>') + '</div>';
-    if (!won && !timed && !G.noMeter) h += '<div class="sub">You need ' + fmt(th[0] - res.score) + ' more points for 1 star.</div>';
+    if (!won && !timed && !G.noMeter) h += '<div class="sub">Almost! You need ' + fmt(th[0] - res.score) + ' more points for 1 star.</div><div class="bar"><i style="width:' + Math.min(99, Math.round(100 * res.score / th[0])) + '%"></i></div>';
+    if (!timed) h += '<div class="sub">Style <b>' + Prog.styleRank(res.style) + '</b> · ' + res.mistakes + ' mistake' + (res.mistakes === 1 ? '' : 's') + (out.challenge ? ' · ⚔ Star Challenge' : '') + '</div>';
     h += '<div class="rew"><span class="pill gold">+' + out.coins + ' 🪙</span><span class="pill">+' + out.xp + ' XP</span></div>';
     if (!timed && out.stars > out.oldStars && out.oldStars > 0) h += '<div class="sub">Improved from ' + out.oldStars + ' to ' + out.stars + ' stars!</div>';
     if (!timed && out.stars <= out.oldStars && won) h += '<div class="sub">Beat your ' + out.oldStars + '-star score to earn more coins.</div>';
+    if (out.stamp) h += '<div class="reveal"><div class="em">💎</div>Gold Stamp! Perfect run, +' + out.stamp + ' 🪙<br><small>Goldener Stempel!</small></div>';
+    if (out.boss) h += '<div class="reveal"><div class="em">👑' + (out.boss.sticker != null ? STICKERS[out.boss.sticker] : '') + '</div>Boss beaten!' + (out.boss.sticker != null ? ' New sticker!' : '') + '</div>';
+    if (out.token) h += '<div class="reveal">🎖 +' + out.token + ' Courage Token (now ' + (save.tokens || 0) + ')</div>';
+    if (out.tokenLost) h += '<div class="sub">⚔ Challenge lost: only the token is gone. Your coins and stars are safe.</div>';
     if (out.chest) h += '<div class="reveal"><div class="em">🎁' + (out.chest.sticker != null ? STICKERS[out.chest.sticker] : '') + '</div>Chest! +' + out.chest.coins + ' 🪙' + (out.chest.sticker != null ? ' and a new sticker!' : '') + '</div>';
     out.ranks.forEach(function (r) { h += '<div class="reveal"><div class="em">🏅' + (r.sticker != null ? STICKERS[r.sticker] : '') + '</div>Rank up! Rank ' + r.rank + ' · ' + rankName(r.rank) + '<br>+' + r.coins + ' 🪙' + (r.sticker != null ? ' and a new sticker' : '') + '</div>'; });
     if (out.unlocked) h += '<div class="reveal">🔓 Level ' + out.unlocked + ' unlocked!</div>';
@@ -268,9 +278,10 @@
     on('#tabTm', 'click', function () { renderLevels('tm'); });
     $('#lvBody').addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
-      if (b.id === 'goCur') startRun(curGame, topLevel(curGame), false);
+      var chal = !!($('#chal') && $('#chal').checked);
+      if (b.id === 'goCur') startRun(curGame, topLevel(curGame), false, chal);
       else if (b.id === 'goTm') startRun(curGame, 1, true);
-      else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false); }
+      else if (b.dataset.l) { if (b.dataset.lock) { sfx('bad'); return; } startRun(curGame, +b.dataset.l, false, chal); }
     });
     on('#gift', 'click', function () {
       var g = Prog.claimGift(save, today(), Math.random); if (!g) return;
